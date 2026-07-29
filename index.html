@@ -13,12 +13,19 @@
 <meta property="og:description" content="Степь, мотоциклы, суббота">
 <meta property="og:image" content="https://manylattice.github.io/f83e4a12-892b-4d6d-b8d1-5f212232a9e3/images/journal-03-sunset.webp">
 
+<!-- In-app browsers (Telegram, Instagram) paint their status bar and toolbar
+     over the page and tint them with this colour - without it they fall back
+     to the body background, which is the pale #F4EDE3 and shows as bright
+     bands above and below the artwork. Sampled from the actual top and
+     bottom edges of the journal pages (they run #AF7D41 to #DAAC6C), so the
+     chrome blends into the paper instead of framing it. -->
+<meta name="theme-color" content="#BE8B4E">
+
 <link rel="preload" as="image" href="images/journal-01-road.webp">
 
 <style>
 /* ===== Variables ===== */
 :root {
-  --paper: #F4EDE3;
   --ink-heading: #3A2E24;
   --ink-body: #4A3728;
   --ink-muted: #6B5B48;
@@ -37,7 +44,11 @@ html { scroll-behavior: auto; }
    so this is just a fallback colour shown while the image decodes -
    it prevents a white flash, nothing more. */
 body {
-  background-color: var(--paper);
+  /* This shows through in two places where a pale value read as a bright
+     band - behind in-app browser chrome, and in the rubber-band overscroll
+     gap when the page is dragged past its end on iOS. Matched to the
+     artwork's own edge tone so both blend into the paper. */
+  background-color: #BE8B4E;
   color: var(--ink-body);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
