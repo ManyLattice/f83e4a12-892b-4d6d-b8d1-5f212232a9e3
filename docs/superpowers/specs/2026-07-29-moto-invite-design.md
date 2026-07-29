@@ -64,7 +64,7 @@ moto-date/
 ```
 <head>    мета для мобильного, og-теги для превью ссылки в Telegram
 <style>   CSS-переменные вверху, потом секции
-<body>    5 секций разметки
+<body>    3 секции разметки
 <script>  CONFIG → ScrollEngine → init()
 ```
 
