@@ -11,9 +11,9 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Вика, поехали">
 <meta property="og:description" content="Степь, мотоциклы, суббота">
-<meta property="og:image" content="https://manylattice.github.io/f83e4a12-892b-4d6d-b8d1-5f212232a9e3/images/art-03-sunset.webp">
+<meta property="og:image" content="https://manylattice.github.io/f83e4a12-892b-4d6d-b8d1-5f212232a9e3/images/journal-03-sunset.webp">
 
-<link rel="preload" as="image" href="images/art-01-road.webp">
+<link rel="preload" as="image" href="images/journal-01-road.webp">
 
 <style>
 /* ===== Variables ===== */
@@ -33,15 +33,11 @@
 
 html { scroll-behavior: auto; }
 
-/* Paper texture: painted once as a static background, never touched
-   during scroll. A layered SVG feTurbulence grain plus a soft gradient
-   vignette, tiled seamlessly behind every section so there is no seam. */
+/* The artwork is now a full-bleed journal page with the paper baked in,
+   so this is just a fallback colour shown while the image decodes -
+   it prevents a white flash, nothing more. */
 body {
   background-color: var(--paper);
-  background-image:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='7' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.227  0 0 0 0 0.180  0 0 0 0 0.141  0 0 0 0.05 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
-  background-repeat: repeat;
-  background-size: 200px 200px;
   color: var(--ink-body);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -61,52 +57,141 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* Bias the block slightly above dead-center: it reads better than a
-     perfect mathematical middle, and keeps a small reserve of breathing
-     room below the button on section 3 without dumping it all there. */
-  justify-content: safe center;
-  gap: clamp(20px, 4vh, 36px);
-  padding-top: calc(4vh + env(safe-area-inset-top));
-  padding-bottom: env(safe-area-inset-bottom);
+  /* Text lives in the lower portion of the screen, over the image.
+     Measured against the new artwork: the shared clean band across all
+     three images is 75-95% of viewport height (see report for the
+     per-band contrast readings). A 7vh bottom padding puts the text
+     block's bottom edge at 93vh - 2vh of margin above the 95% floor,
+     where bottom-edge staining wrecks contrast on every image - while
+     the tallest block (section 3: heading + button) still tops out
+     around 75.5vh, just inside the band's upper edge. Shorter blocks
+     (sections 1-2) sit with more margin at the top of the band. */
+  justify-content: flex-end;
+  padding-bottom: calc(7vh + env(safe-area-inset-bottom));
 }
 
-/* Text sits on a readable measure; the illustration deliberately breaks
-   out of it (see below). Capped on desktop so lines stay short. */
+/* Text sits on a readable measure; the illustration fills the whole
+   screen behind it. Capped on desktop so lines stay short. */
 .section__content {
+  position: relative;
   width: min(100% - 44px, 620px);
   margin-left: auto;
   margin-right: auto;
 }
 
+/* Section 1 only: the pencil figure in the new artwork stands in the
+   lower-left, roughly 52-78% down the page, and her ink is dark enough
+   that overlapping text stays unreadable no matter the scrim. The
+   right half of the frame is clean at every measured band. Pulling
+   this block to the right (instead of centered) keeps it entirely
+   over clean paper and clear of her at every scroll position - safer
+   than relying on the sliver of band above her head. */
+.section--road .section__content {
+  margin-left: auto;
+  /* Not margin-right: 0 - that pushed the text hard against the viewport
+     edge and clipped the last glyph. The block keeps its own gutter. */
+  margin-right: 22px;
+  text-align: right;
+}
+
+/* Section 3 only. A 1%-row ink scan of the sunset page puts its
+   handwritten note and arrow at 75-84% of the height, with bottom-edge
+   staining from 94%. This section carries no heading - just the button -
+   so it anchors to the bottom and lands in the 85-93% window below the
+   note, leaving that note uncovered and readable as part of the page. */
+.section--final .section__sticky {
+  justify-content: flex-end;
+  padding-top: 0;
+  padding-bottom: calc(7vh + env(safe-area-inset-bottom));
+}
+
 .section__art {
   display: block;
-  /* Full bleed, and height-driven rather than width-driven.
-     The source is 3:2, and at 390px wide that geometry caps the rendered
-     height at 260px - only 31% of an 844px viewport, which reads as a
-     stamp. So the box gets an explicit height and `cover` crops the
-     sides instead. These are landscape paintings: losing some left and
-     right costs nothing, and the dissolving watercolor edges mean the
-     crop never shows as a hard line. */
-  width: 100%;
-  height: clamp(230px, 37vh, 400px);
+  /* Full-bleed journal page: fills the entire sticky viewport edge to
+     edge, top to bottom. The paper, stains and sketches are baked into
+     the image itself, so it IS the screen rather than an element on it.
+     Oversized by 8% and pulled back by half of that on each side, so the
+     scrubbed scale (which starts below 1 to avoid ever overflowing the
+     viewport) still covers the screen completely at every point in the
+     animation. Without the oversize, scale(0.94) left a visible frame of
+     background around the image - measured 12px at the sides. */
+  position: absolute;
+  top: -4%;
+  left: -4%;
+  width: 108%;
+  height: 108%;
   object-fit: cover;
   object-position: center;
   will-change: transform;   /* only on the illustration, not on everything */
 }
 
-/* ===== Typography ===== */
+/* ===== Text scrim =====
+   The paper carries dark stains and ink sketches throughout, so there is
+   no clean zone for dark text - a scrim is required, not optional. Built
+   as a soft paper-toned wash rather than a panel: fully transparent above
+   the text band, strongest directly behind the text (75-93vh, where the
+   text block now lives), fading out again toward the bottom edge so it
+   never reads as a hard-edged box.
+
+   Alpha is tuned PER SECTION from the measured worst-case background for
+   its own artwork, so the two stronger pages (road, moto) get a lighter
+   wash than the weakest one (sunset) - see the verification report for
+   the composited-contrast arithmetic behind each value. All three clear
+   4.5:1 for both heading and body ink with margin to spare. */
+.section__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(244, 237, 227, 0) 0%,
+      rgba(244, 237, 227, 0) 68%,
+      rgba(244, 237, 227, var(--scrim-a)) 75%,
+      rgba(244, 237, 227, var(--scrim-a)) 93%,
+      rgba(244, 237, 227, calc(var(--scrim-a) * 0.5)) 100%
+    );
+  pointer-events: none;
+}
+
+.section--road .section__scrim,
+.section--moto .section__scrim {
+  --scrim-a: 0.42;
+}
+
+/* This page's paper is the weakest of the three, so it takes the highest
+   alpha. The wash covers 72-93%, matching where the heading and button
+   now sit, and stops short of the very bottom so the edge staining and
+   the thumbprint stay visible as part of the artwork. */
+.section--final .section__scrim {
+  --scrim-a: 0.46;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(244, 237, 227, 0) 0%,
+      rgba(244, 237, 227, 0) 64%,
+      rgba(244, 237, 227, var(--scrim-a)) 72%,
+      rgba(244, 237, 227, var(--scrim-a)) 93%,
+      rgba(244, 237, 227, 0) 99%
+    );
+}
+
+/* ===== Typography =====
+   The artwork is busy - full-bleed paper, stains, sketches - so timid
+   type disappears into it. Sized up and pushed heavier than the old
+   sparse-on-blank-paper version so it holds its own against the image. */
 .title {
   font-family: var(--font-serif);
-  font-size: clamp(2.4rem, 12vw, 4rem);
+  font-size: clamp(3rem, 15vw, 5rem);
   font-weight: 700;
   letter-spacing: -0.01em;
-  line-height: 1.1;
+  line-height: 1.05;
   color: var(--ink-heading);
 }
 
 .hint {
   margin-top: 12px;
-  font-size: clamp(1rem, 4.4vw, 1.25rem);
+  font-size: clamp(1.1rem, 5vw, 1.4rem);
+  font-weight: 600;
   color: var(--ink-muted);
 }
 
@@ -114,23 +199,15 @@ body {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .line {
   font-family: var(--font-sans);
-  font-size: clamp(1.35rem, 6.4vw, 2rem);
-  font-weight: 500;
-  line-height: 1.4;
+  font-size: clamp(1.5rem, 7.2vw, 2.3rem);
+  font-weight: 600;
+  line-height: 1.35;
   color: var(--ink-body);
-}
-
-.ask {
-  font-family: var(--font-serif);
-  font-size: clamp(2.2rem, 10vw, 3.4rem);
-  font-weight: 700;
-  color: var(--ink-heading);
-  margin-bottom: 26px;
 }
 
 .cta {
@@ -148,11 +225,14 @@ body {
 
 /* ===== Scrubbed animations =====
    Each section decides what to do with its own --p.
-   The engine only supplies the number. */
+   The engine only supplies the number.
+   Scales stay at or below 1: the illustration is now full-bleed, so any
+   scale above 1 pushes it past the viewport edge (measured 421px wide on
+   a 390px screen before this). Every section grows INTO its box. */
 
 /* Section 1: illustration eases in, text lifts and fades as you scroll past */
 .section--road .section__art {
-  transform: scale(calc(1 - var(--p, 0) * 0.08));
+  transform: scale(calc(0.94 + var(--p, 0) * 0.06));
   opacity: calc(1 - var(--p, 0) * 0.5);
 }
 .section--road .section__content {
@@ -162,15 +242,8 @@ body {
 
 /* Section 2: illustration settles, the three lines rise in sequence.
    Each line starts 0.08 later than the one before it (--i). */
-/* Scales stay at or below 1: the illustration is now full-bleed, so any
-   scale above 1 pushes it past the viewport edge (measured 421px wide on
-   a 390px screen before this). It settles by growing INTO its box. */
 .section--moto .section__art {
   transform: scale(calc(0.92 + var(--p, 0) * 0.08));
-  /* This painting fills 98% of its canvas (the other two leave a margin
-     of dissolving brushwork that `cover` can safely eat). Cropping from
-     the centre cut the sky off the bikes, so bias the crop upward. */
-  object-position: center 30%;
 }
 .section--moto .line {
   --start: calc(var(--i, 0) * 0.08);
@@ -183,14 +256,14 @@ body {
 .section--final .section__art {
   transform: scale(calc(0.94 + var(--p, 0) * 0.06));
 }
-.section--final .ask {
-  opacity: clamp(0, calc(var(--p, 0) * 3), 1);
-  transform: translateY(calc((1 - clamp(0, calc(var(--p, 0) * 3), 1)) * 20px));
-}
+/* The button is now the only element on this screen, so it no longer
+   waits for a heading to land first - the old 0.18 delay existed to let
+   the eye reach the heading before the button appeared. It rises on its
+   own from the start of the section. */
 .section--final .cta {
-  --btn: clamp(0, calc((var(--p, 0) - 0.18) * 3), 1);
+  --btn: clamp(0, calc(var(--p, 0) * 2.6), 1);
   opacity: var(--btn);
-  transform: scale(calc(0.9 + var(--btn) * 0.1));
+  transform: scale(calc(0.92 + var(--btn) * 0.08));
 }
 
 /* ===== No-JS fallback =====
@@ -200,7 +273,6 @@ body {
 .no-js .section__art,
 .no-js .section__content,
 .no-js .line,
-.no-js .ask,
 .no-js .cta {
   transform: none !important;
   opacity: 1 !important;
@@ -220,7 +292,6 @@ body {
   .section__art,
   .section__content,
   .line,
-  .ask,
   .cta {
     transform: none !important;
     opacity: 1 !important;
@@ -235,7 +306,8 @@ body {
 <!-- ===== Section 1: the invitation ===== -->
 <section class="section section--road">
   <div class="section__sticky">
-    <img class="section__art" src="images/art-01-road.webp" alt="">
+    <img class="section__art" src="images/journal-01-road.webp" alt="">
+    <div class="section__scrim"></div>
     <div class="section__content">
       <h1 class="title"><span data-config="name">Вика</span>,</h1>
       <p class="hint">предлагаю тебе</p>
@@ -246,7 +318,8 @@ body {
 <!-- ===== Section 2: the plan ===== -->
 <section class="section section--moto">
   <div class="section__sticky">
-    <img class="section__art" src="images/art-02-moto.webp" alt="" loading="lazy">
+    <img class="section__art" src="images/journal-02-moto.webp" alt="" loading="lazy">
+    <div class="section__scrim"></div>
     <div class="section__content">
       <ul class="lines">
         <li class="line" style="--i:0">В субботу - степь,</li>
@@ -260,10 +333,10 @@ body {
 <!-- ===== Section 3: the ask ===== -->
 <section class="section section--final">
   <div class="section__sticky">
-    <img class="section__art" src="images/art-03-sunset.webp" alt="" loading="lazy">
+    <img class="section__art" src="images/journal-03-sunset.webp" alt="" loading="lazy">
+    <div class="section__scrim"></div>
     <div class="section__content">
-      <p class="ask">Поехали?</p>
-      <a class="cta" href="https://t.me/" target="_blank" rel="noopener">Да, поехали</a>
+      <a class="cta" href="https://t.me/" target="_blank" rel="noopener">Поехали</a>
     </div>
   </div>
 </section>
