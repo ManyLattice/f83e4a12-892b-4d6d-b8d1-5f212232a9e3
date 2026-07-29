@@ -1,1 +1,9 @@
 .DS_Store
+
+# Source PNGs for the illustrations (8.6 MB). The published page uses the
+# WebP versions in images/; these are kept locally in case they need
+# reprocessing.
+.orig-art/
+
+# Scratch workspace for the subagent-driven build.
+.superpowers/
