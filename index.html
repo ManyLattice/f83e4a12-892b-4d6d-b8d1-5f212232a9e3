@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ru" class="no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Вика, поехали</title>
+
+<!-- Open Graph: preview when the link is shared in Telegram.
+     Absolute URL is required - Telegram ignores relative paths.
+     Replace the host after the GitHub Pages URL is known. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Вика, поехали">
+<meta property="og:description" content="Степь, мотоциклы, суббота">
+<meta property="og:image" content="https://manylattice.github.io/f83e4a12-892b-4d6d-b8d1-5f212232a9e3/images/art-03-sunset.webp">
+
+<link rel="preload" as="image" href="images/art-01-road.webp">
+
+<style>
+/* ===== Variables ===== */
+:root {
+  --paper: #F4EDE3;
+  --ink-heading: #3A2E24;
+  --ink-body: #4A3728;
+  --ink-muted: #6B5B48;
+  --btn-fill: #A8452A;
+  --btn-label: #FFFFFF;
+  --font-serif: Georgia, "Times New Roman", "Iowan Old Style", serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ===== Base ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: auto; }
+
+/* Paper texture: painted once as a static background, never touched
+   during scroll. A layered SVG feTurbulence grain plus a soft gradient
+   vignette, tiled seamlessly behind every section so there is no seam. */
+body {
+  background-color: var(--paper);
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='7' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.227  0 0 0 0 0.180  0 0 0 0 0.141  0 0 0 0.05 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  color: var(--ink-body);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ===== Sections ===== */
+.section {
+  position: relative;
+  height: 200vh;      /* double height gives the scroll room to scrub */
+}
+
+.section__sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  /* Bias the block slightly above dead-center: it reads better than a
+     perfect mathematical middle, and keeps a small reserve of breathing
+     room below the button on section 3 without dumping it all there. */
+  justify-content: safe center;
+  gap: clamp(20px, 4vh, 36px);
+  padding-top: calc(4vh + env(safe-area-inset-top));
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Text sits on a readable measure; the illustration deliberately breaks
+   out of it (see below). Capped on desktop so lines stay short. */
+.section__content {
+  width: min(100% - 44px, 620px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.section__art {
+  display: block;
+  /* Full bleed, and height-driven rather than width-driven.
+     The source is 3:2, and at 390px wide that geometry caps the rendered
+     height at 260px - only 31% of an 844px viewport, which reads as a
+     stamp. So the box gets an explicit height and `cover` crops the
+     sides instead. These are landscape paintings: losing some left and
+     right costs nothing, and the dissolving watercolor edges mean the
+     crop never shows as a hard line. */
+  width: 100%;
+  height: clamp(230px, 37vh, 400px);
+  object-fit: cover;
+  object-position: center;
+  will-change: transform;   /* only on the illustration, not on everything */
+}
+
+/* ===== Typography ===== */
+.title {
+  font-family: var(--font-serif);
+  font-size: clamp(2.4rem, 12vw, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  color: var(--ink-heading);
+}
+
+.hint {
+  margin-top: 12px;
+  font-size: clamp(1rem, 4.4vw, 1.25rem);
+  color: var(--ink-muted);
+}
+
+.lines {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.line {
+  font-family: var(--font-sans);
+  font-size: clamp(1.35rem, 6.4vw, 2rem);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ink-body);
+}
+
+.ask {
+  font-family: var(--font-serif);
+  font-size: clamp(2.2rem, 10vw, 3.4rem);
+  font-weight: 700;
+  color: var(--ink-heading);
+  margin-bottom: 26px;
+}
+
+.cta {
+  display: block;
+  width: 100%;
+  padding: 20px 24px;
+  background: var(--btn-fill);
+  color: var(--btn-label);
+  font-size: clamp(1.1rem, 4.8vw, 1.3rem);
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 16px;
+}
+
+/* ===== Scrubbed animations =====
+   Each section decides what to do with its own --p.
+   The engine only supplies the number. */
+
+/* Section 1: illustration eases in, text lifts and fades as you scroll past */
+.section--road .section__art {
+  transform: scale(calc(1 - var(--p, 0) * 0.08));
+  opacity: calc(1 - var(--p, 0) * 0.5);
+}
+.section--road .section__content {
+  transform: translateY(calc(var(--p, 0) * -40px));
+  opacity: calc(1 - var(--p, 0) * 1.6);
+}
+
+/* Section 2: illustration settles, the three lines rise in sequence.
+   Each line starts 0.08 later than the one before it (--i). */
+/* Scales stay at or below 1: the illustration is now full-bleed, so any
+   scale above 1 pushes it past the viewport edge (measured 421px wide on
+   a 390px screen before this). It settles by growing INTO its box. */
+.section--moto .section__art {
+  transform: scale(calc(0.92 + var(--p, 0) * 0.08));
+  /* This painting fills 98% of its canvas (the other two leave a margin
+     of dissolving brushwork that `cover` can safely eat). Cropping from
+     the centre cut the sky off the bikes, so bias the crop upward. */
+  object-position: center 30%;
+}
+.section--moto .line {
+  --start: calc(var(--i, 0) * 0.08);
+  --local: calc((var(--p, 0) - var(--start)) * 3.2);
+  opacity: clamp(0, var(--local), 1);
+  transform: translateY(calc((1 - clamp(0, var(--local), 1)) * 26px));
+}
+
+/* Section 3: illustration settles, heading appears, button follows later */
+.section--final .section__art {
+  transform: scale(calc(0.94 + var(--p, 0) * 0.06));
+}
+.section--final .ask {
+  opacity: clamp(0, calc(var(--p, 0) * 3), 1);
+  transform: translateY(calc((1 - clamp(0, calc(var(--p, 0) * 3), 1)) * 20px));
+}
+.section--final .cta {
+  --btn: clamp(0, calc((var(--p, 0) - 0.18) * 3), 1);
+  opacity: var(--btn);
+  transform: scale(calc(0.9 + var(--btn) * 0.1));
+}
+
+/* ===== No-JS fallback =====
+   The scrubbed elements start at opacity 0 by design - they fade in as
+   the engine advances --p. With no JS that never happens, so pin them
+   to their end state. The class is removed by the script on load. */
+.no-js .section__art,
+.no-js .section__content,
+.no-js .line,
+.no-js .ask,
+.no-js .cta {
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+/* ===== Reduced motion =====
+   No scrubbing: sections become a plain vertical scroll,
+   every element pinned to its final state. */
+@media (prefers-reduced-motion: reduce) {
+  .section {
+    height: auto;
+  }
+  .section__sticky {
+    position: relative;
+    height: 100vh;
+  }
+  .section__art,
+  .section__content,
+  .line,
+  .ask,
+  .cta {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<main>
+
+<!-- ===== Section 1: the invitation ===== -->
+<section class="section section--road">
+  <div class="section__sticky">
+    <img class="section__art" src="images/art-01-road.webp" alt="">
+    <div class="section__content">
+      <h1 class="title"><span data-config="name">Вика</span>,</h1>
+      <p class="hint">предлагаю тебе</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Section 2: the plan ===== -->
+<section class="section section--moto">
+  <div class="section__sticky">
+    <img class="section__art" src="images/art-02-moto.webp" alt="" loading="lazy">
+    <div class="section__content">
+      <ul class="lines">
+        <li class="line" style="--i:0">В субботу - степь,</li>
+        <li class="line" style="--i:1">недалеко от города,</li>
+        <li class="line" style="--i:2">два мотоцикла.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Section 3: the ask ===== -->
+<section class="section section--final">
+  <div class="section__sticky">
+    <img class="section__art" src="images/art-03-sunset.webp" alt="" loading="lazy">
+    <div class="section__content">
+      <p class="ask">Поехали?</p>
+      <a class="cta" href="https://t.me/" target="_blank" rel="noopener">Да, поехали</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+// The engine is about to take over: drop the no-JS safety class.
+// If this line never runs, CSS keeps every element in its visible end state.
+document.documentElement.classList.remove("no-js");
+
+// ============================================================
+// CONFIG - the only place to edit when the content changes
+// ============================================================
+const CONFIG = {
+  name: "Вика",
+  place: "",              // not rendered in the current copy
+  when: "выходные",       // not rendered in the current copy
+  telegram: "ManyLattice",
+  reply: "(☞ﾟヮﾟ)☞ Погнали ☜(ﾟヮﾟ☜)"
+};
+
+// ============================================================
+// Telegram link
+// ============================================================
+
+/**
+ * Builds a t.me link that opens a private chat with the text
+ * pre-filled in the input field. The text is NOT sent
+ * automatically - pressing send stays her decision.
+ */
+function buildTelegramUrl(username, text) {
+  // Telegram usernames are displayed as "@name" everywhere, so a leading
+  // "@" (plus any surrounding whitespace) is the likeliest thing to end up
+  // in CONFIG.telegram. Strip it - t.me links must not include the "@".
+  const cleanUsername = username.trim().replace(/^@/, "");
+  const base = `https://t.me/${cleanUsername}`;
+  return text ? `${base}?text=${encodeURIComponent(text)}` : base;
+}
+
+// ============================================================
+// ScrollEngine - turns scroll position into a 0..1 progress
+// value per section, written to the --p custom property.
+// Knows nothing about what the animations look like.
+// ============================================================
+
+/**
+ * How far a section has scrolled through the viewport.
+ *
+ * 0 - the section's top edge just reached the top of the screen
+ * 1 - the section's bottom edge reached the bottom of the screen
+ *
+ * The section is 200vh tall with a 100vh sticky child, so the
+ * scrubbing distance is exactly one viewport height.
+ */
+function sectionProgress(rect, viewportHeight) {
+  const distance = rect.height - viewportHeight;
+  if (distance <= 0) return 0;
+  const scrolled = -rect.top;
+  return Math.min(1, Math.max(0, scrolled / distance));
+}
+
+const ScrollEngine = {
+  sections: [],
+  smoothed: [],
+  // Tracks whether a section's off-screen endpoint has already been
+  // snapped and written. Reset to false whenever the section is back
+  // on screen, so it re-settles correctly if it goes off-screen again
+  // (including after a resize/orientation change moves the boundary).
+  settled: [],
+
+  start() {
+    this.sections = Array.from(document.querySelectorAll(".section"));
+    this.smoothed = this.sections.map(() => 0);
+    this.settled = this.sections.map(() => false);
+    this.tick();
+  },
+
+  tick() {
+    const vh = window.innerHeight;
+
+    // Phase 1: read everything. Never interleave reads and writes -
+    // that forces a layout recalculation per section (layout thrashing),
+    // which is immediately visible on a phone.
+    // For each section we compute either a lerp target (on-screen) or
+    // a settle endpoint (off-screen) - never both.
+    const plans = this.sections.map((section) => {
+      const rect = section.getBoundingClientRect();
+      const offTop = rect.bottom < 0;
+      const offBottom = rect.top > vh;
+      if (offTop || offBottom) {
+        // Scrolled past the top settles at 1, not yet reached settles at 0.
+        return { settle: offTop ? 1 : 0 };
+      }
+      return { target: sectionProgress(rect, vh) };
+    });
+
+    // Phase 2: write everything.
+    plans.forEach((plan, i) => {
+      if ("settle" in plan) {
+        // Already snapped to this endpoint and not touched since - skip,
+        // this is what keeps a permanently off-screen section cheap.
+        if (this.settled[i] && this.smoothed[i] === plan.settle) return;
+        this.smoothed[i] = plan.settle;
+        this.settled[i] = true;
+        this.sections[i].style.setProperty("--p", this.smoothed[i].toFixed(4));
+        return;
+      }
+      // Back on screen - resume normal easing next time it leaves.
+      this.settled[i] = false;
+      // lerp: the value chases its target instead of snapping to it.
+      // Without this the scrubbing looks jerky.
+      this.smoothed[i] += (plan.target - this.smoothed[i]) * 0.1;
+      this.sections[i].style.setProperty("--p", this.smoothed[i].toFixed(4));
+    });
+
+    requestAnimationFrame(() => this.tick());
+  }
+};
+
+// ============================================================
+// init - inject CONFIG into markup, wire up the links
+// ============================================================
+function init() {
+  // Text substitution: every [data-config] element gets its value.
+  // Empty values leave the markup default in place.
+  document.querySelectorAll("[data-config]").forEach((el) => {
+    const value = CONFIG[el.dataset.config];
+    if (value) el.textContent = value;
+  });
+
+  const cta = document.querySelector(".cta");
+
+  if (cta) cta.href = buildTelegramUrl(CONFIG.telegram, CONFIG.reply);
+
+  // Respect the OS "reduce motion" setting: scrubbing can make people
+  // with motion sensitivity physically unwell. CSS puts everything in
+  // its final state via the matching media query.
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduceMotion) ScrollEngine.start();
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+
+</body>
+</html>
