@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFE8D6">
+<title>Завтра в гончарную мастерскую?</title>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+  }
+}
+</script>
+
+<style>
+  :root {
+    --clay: #E8825A;
+    --clay-deep: #C9543B;
+    --ink: #4A2F26;
+    --ink-soft: #8A6455;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    background: linear-gradient(170deg, #FFEFDC 0%, #FFE1CC 45%, #FFD3C4 100%);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #stage {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-items: center;
+    padding:
+      calc(env(safe-area-inset-top) + 28px)
+      20px
+      calc(env(safe-area-inset-bottom) + 32px);
+    gap: 8px;
+  }
+
+  /* Headline */
+
+  #headline {
+    text-align: center;
+    font-size: clamp(1.55rem, 6.6vw, 2.7rem);
+    font-weight: 700;
+    line-height: 1.18;
+    letter-spacing: -0.02em;
+    max-width: 15ch;
+    margin-inline: auto;
+    transition: opacity .45s ease, transform .45s ease;
+  }
+
+  #subline {
+    display: block;
+    margin-top: 12px;
+    font-size: clamp(.9rem, 3.6vw, 1.1rem);
+    font-weight: 500;
+    color: var(--ink-soft);
+    letter-spacing: 0;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity .5s ease .1s, transform .5s ease .1s;
+  }
+
+  #subline.show { opacity: 1; transform: none; }
+
+  .swap-out { opacity: 0; transform: translateY(-10px); }
+
+  /* 3D canvas */
+
+  #scene {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+  }
+
+  #fallback {
+    display: none;
+    place-content: center;
+    text-align: center;
+    font-size: clamp(5rem, 30vw, 11rem);
+    line-height: 1;
+    animation: bob 3.2s ease-in-out infinite;
+  }
+
+  @keyframes bob {
+    0%, 100% { transform: translateY(0) rotate(-4deg); }
+    50%      { transform: translateY(-14px) rotate(4deg); }
+  }
+
+  /* Action button */
+
+  #actions {
+    display: grid;
+    justify-items: center;
+    min-height: 84px;
+    align-content: center;
+  }
+
+  .btn {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 190px;
+    min-height: 60px;
+    padding: 0 40px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--clay) 0%, var(--clay-deep) 100%);
+    color: #fff;
+    font: inherit;
+    font-size: 1.28rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+    text-decoration: none;
+    box-shadow:
+      0 10px 22px -8px rgba(201, 84, 59, .62),
+      inset 0 -3px 0 rgba(0, 0, 0, .13);
+    transition: transform .16s cubic-bezier(.34, 1.56, .64, 1), box-shadow .16s ease, opacity .3s ease;
+  }
+
+  .btn:active {
+    transform: translateY(3px) scale(.97);
+    box-shadow:
+      0 4px 12px -6px rgba(201, 84, 59, .6),
+      inset 0 -1px 0 rgba(0, 0, 0, .13);
+  }
+
+  .btn[disabled] {
+    pointer-events: none;
+    opacity: .55;
+  }
+
+  .btn.gone {
+    opacity: 0;
+    transform: scale(.9);
+    pointer-events: none;
+  }
+
+  #reply {
+    position: absolute;
+    opacity: 0;
+    transform: scale(.9);
+    pointer-events: none;
+    transition: opacity .4s ease, transform .4s cubic-bezier(.34, 1.56, .64, 1);
+  }
+
+  #reply.show {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    position: static;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #fallback { animation: none; }
+    .btn, #headline, #subline, #reply { transition-duration: .01ms; }
+  }
+</style>
+</head>
+
+<body>
+  <main id="stage">
+    <h1 id="headline">
+      Завтра в гончарную мастерскую?
+      <span id="subline"></span>
+    </h1>
+
+    <canvas id="scene"></canvas>
+    <div id="fallback" aria-hidden="true">🏺</div>
+
+    <div id="actions">
+      <!-- Enabled by the module once it has loaded, so an early tap is never lost. -->
+      <button id="poke" class="btn" type="button" disabled>Тык!</button>
+      <a id="reply" class="btn"
+         href="https://t.me/ManyLattice?text=%D0%97%D0%BD%D0%B0%D1%87%D0%B8%D1%82%20%D0%B7%D0%B0%D0%B2%D1%82%D1%80%D0%B0%20%F0%9F%A5%B0"
+         target="_blank" rel="noopener">Написать 💬</a>
+    </div>
+  </main>
+
+<script type="module">
+import * as THREE from 'three';
+
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const COLOR = {
+  clayPale: 0xD98E6E,
+  clayRich: 0xE35D4F,
+  wheel:    0x93A7B4,
+  wheelRim: 0x76899A,
+  base:     0x5E6F7D,
+  shadow:   0xC98F72,
+};
+
+/* ---------- Heart geometry ---------- */
+
+/**
+ * Builds a chunky, rounded heart. Bevelled extrusion is what makes it read as
+ * squishy clay rather than a flat cut-out.
+ */
+function createHeartGeometry() {
+  const s = new THREE.Shape();
+
+  s.moveTo(0, 0.42);
+  s.bezierCurveTo(0, 0.42, -0.18, 0.78, -0.52, 0.78);
+  s.bezierCurveTo(-1.02, 0.78, -1.02, 0.16, -1.02, 0.16);
+  s.bezierCurveTo(-1.02, -0.20, -0.76, -0.56, 0, -0.94);
+  s.bezierCurveTo(0.76, -0.56, 1.02, -0.20, 1.02, 0.16);
+  s.bezierCurveTo(1.02, 0.16, 1.02, 0.78, 0.52, 0.78);
+  s.bezierCurveTo(0.18, 0.78, 0, 0.42, 0, 0.42);
+
+  const geo = new THREE.ExtrudeGeometry(s, {
+    depth: 0.42,
+    bevelEnabled: true,
+    bevelThickness: 0.26,
+    bevelSize: 0.24,
+    bevelSegments: 7,
+    curveSegments: 22,
+  });
+
+  geo.center();
+  return geo;
+}
+
+/** Three-step ramp: the hard bands are what make the shading look cartoonish. */
+function createToonRamp() {
+  const tex = new THREE.DataTexture(
+    new Uint8Array([90, 168, 255]), 3, 1, THREE.RedFormat
+  );
+  tex.minFilter = THREE.NearestFilter;
+  tex.magFilter = THREE.NearestFilter;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/* ---------- Scene ---------- */
+
+/**
+ * Assembles the pottery wheel and the clay heart.
+ * Returns null when WebGL is unavailable so the caller can fall back.
+ */
+function createScene(canvas) {
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  } catch {
+    return null;
+  }
+
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+  camera.position.set(0, 1.9, 9);   // z is recomputed in resize()
+  camera.lookAt(0, -1.05, 0);
+
+  const ramp = createToonRamp();
+  const toon = (color) => new THREE.MeshToonMaterial({ color, gradientMap: ramp });
+
+  // Lights: one strong key from upper right, warm/cool fill for the rest.
+  const key = new THREE.DirectionalLight(0xffffff, 2.5);
+  key.position.set(3.4, 6, 4.6);
+  scene.add(key);
+  scene.add(new THREE.HemisphereLight(0xffd9c0, 0xa06a52, 1.35));
+
+  // Pottery wheel: spinning disc, static column and foot.
+  const wheel = new THREE.Group();
+
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.0, 0.3, 48), toon(COLOR.wheel));
+  wheel.add(disc);
+
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(2.0, 0.11, 12, 48), toon(COLOR.wheelRim));
+  rim.rotation.x = Math.PI / 2;
+  rim.position.y = 0.15;
+  wheel.add(rim);
+
+  // Off-centre nub so the spin is actually visible on a smooth disc.
+  const nub = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10), toon(COLOR.wheelRim));
+  nub.position.set(1.35, 0.17, 0);
+  wheel.add(nub);
+
+  wheel.position.y = -1.5;
+  scene.add(wheel);
+
+  const column = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.42, 1.5, 24), toon(COLOR.base));
+  column.position.y = -2.4;
+  scene.add(column);
+
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.15, 0.26, 28), toon(COLOR.base));
+  foot.position.y = -3.2;
+  scene.add(foot);
+
+  // Fake contact shadow — cheaper than a shadow map and better suited to toon.
+  const shadow = new THREE.Mesh(
+    new THREE.CircleGeometry(1.5, 32),
+    new THREE.MeshBasicMaterial({ color: COLOR.shadow, transparent: true, opacity: 0.34 })
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = -1.33;
+  scene.add(shadow);
+
+  const heart = new THREE.Mesh(createHeartGeometry(), toon(COLOR.clayPale));
+  heart.scale.setScalar(1.05);
+  heart.position.y = -0.28;
+  scene.add(heart);
+
+  // Clay specks flung off during moulding; parked out of sight until then.
+  const specks = [];
+  for (let i = 0; i < 7; i++) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), toon(COLOR.clayRich));
+    m.visible = false;
+    scene.add(m);
+    specks.push(m);
+  }
+
+  function resize() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+
+    // Frame the whole rig (heart top to wheel foot) whatever the viewport shape.
+    // Vertical fit alone crops on narrow screens, so widen the pull-back by the
+    // aspect ratio when the viewport is taller than it is wide.
+    const RIG_HEIGHT = 5.6;
+    const RIG_WIDTH = 4.6;
+    const vFov = (camera.fov * Math.PI) / 180;
+    const distForHeight = (RIG_HEIGHT / 2) / Math.tan(vFov / 2);
+    const distForWidth = (RIG_WIDTH / 2) / Math.tan(vFov / 2) / camera.aspect;
+    camera.position.z = Math.max(distForHeight, distForWidth) * 1.02;
+
+    camera.updateProjectionMatrix();
+    camera.lookAt(0, -1.05, 0);
+  }
+
+  return { renderer, scene, camera, wheel, heart, specks, resize };
+}
+
+/* ---------- Animation ---------- */
+
+const easeOut  = (t) => 1 - Math.pow(1 - t, 3);
+const easeBack = (t) => { const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+
+/**
+ * Owns the render loop and the idle -> moulding -> settled state machine.
+ * Knows nothing about the DOM beyond the canvas it was handed.
+ */
+function createAnimator(refs) {
+  const { renderer, scene, camera, wheel, heart, specks, resize } = refs;
+  const MOULD_MS = REDUCED ? 400 : 1800;
+
+  let raf = 0;
+  let last = performance.now();
+  let elapsed = 0;
+  let state = 'idle';
+  let mouldT = 0;
+  let onSettled = null;
+
+  const paleColor = new THREE.Color(COLOR.clayPale);
+  const richColor = new THREE.Color(COLOR.clayRich);
+  const speckDirs = specks.map((_, i) => {
+    const a = (i / specks.length) * Math.PI * 2;
+    return new THREE.Vector3(Math.cos(a), 0.55 + (i % 3) * 0.3, Math.sin(a) * 0.55);
+  });
+
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    elapsed += dt;
+
+    let spin = REDUCED ? 0 : 0.55;
+
+    if (state === 'moulding') {
+      mouldT = Math.min(mouldT + dt * 1000 / MOULD_MS, 1);
+
+      // Wheel: surge, then ease back down.
+      spin = 0.55 + Math.sin(mouldT * Math.PI) * 4.2;
+
+      // Squash under the potter's hands, then spring taller than it started.
+      const squash = Math.sin(Math.min(mouldT / 0.45, 1) * Math.PI);
+      const rise = mouldT > 0.45 ? easeBack((mouldT - 0.45) / 0.55) : 0;
+      heart.scale.set(
+        1.05 + squash * 0.20 - rise * 0.05,
+        1.05 - squash * 0.28 + rise * 0.17,
+        1.05 + squash * 0.20 - rise * 0.05
+      );
+      heart.material.color.copy(paleColor).lerp(richColor, easeOut(mouldT));
+
+      // Specks fly out and fall back within the first half of the moulding.
+      const st = Math.min(mouldT / 0.5, 1);
+      specks.forEach((s, i) => {
+        s.visible = st > 0.02 && st < 0.99 && !REDUCED;
+        const d = speckDirs[i];
+        s.position.set(
+          d.x * st * 2.6,
+          -0.3 + d.y * st * 2.2 - st * st * 3.1,
+          d.z * st * 2.6
+        );
+        s.scale.setScalar(1 - st * 0.6);
+      });
+
+      if (mouldT >= 1) {
+        state = 'settled';
+        specks.forEach((s) => { s.visible = false; });
+        heart.scale.setScalar(1.17);
+        heart.material.color.copy(richColor);
+        onSettled?.();
+        onSettled = null;
+      }
+    } else {
+      // Gentle breathing so the scene never feels frozen.
+      const breathe = REDUCED ? 0 : Math.sin(elapsed * 1.7) * 0.022;
+      const base = state === 'settled' ? 1.17 : 1.05;
+      heart.scale.set(base + breathe, base - breathe, base + breathe);
+    }
+
+    wheel.rotation.y += spin * dt;
+
+    // The heart is an extruded silhouette — spinning it around Y would turn it
+    // edge-on and lose the shape. It sways instead; only the wheel spins.
+    if (!REDUCED) {
+      heart.rotation.y = Math.sin(elapsed * 0.9) * 0.22;
+      heart.rotation.z = Math.sin(elapsed * 1.3) * 0.045;
+    }
+
+    renderer.render(scene, camera);
+    raf = requestAnimationFrame(frame);
+  }
+
+  return {
+    start() {
+      resize();
+      window.addEventListener('resize', resize);
+      window.addEventListener('orientationchange', resize);
+      last = performance.now();
+      raf = requestAnimationFrame(frame);
+    },
+    mould() {
+      if (state !== 'idle') return Promise.resolve();
+      state = 'moulding';
+      mouldT = 0;
+      return new Promise((resolve) => { onSettled = resolve; });
+    },
+    dispose() {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('orientationchange', resize);
+    },
+  };
+}
+
+/* ---------- UI ---------- */
+
+/** Swaps the copy and buttons. Knows nothing about three.js. */
+function createUI(animator) {
+  const poke = document.getElementById('poke');
+  const reply = document.getElementById('reply');
+  const headline = document.getElementById('headline');
+  const subline = document.getElementById('subline');
+
+  poke.disabled = false;
+
+  let busy = false;
+  poke.addEventListener('click', async () => {
+    if (busy) return;
+    busy = true;
+    await animator.mould();
+
+    headline.classList.add('swap-out');
+    setTimeout(() => {
+      headline.firstChild.textContent = 'Ура! Значит завтра 🥰';
+      subline.textContent = 'Слепим что-нибудь кривое, но своё';
+      headline.classList.remove('swap-out');
+      subline.classList.add('show');
+      poke.classList.add('gone');
+      reply.classList.add('show');
+    }, 450);
+  }, { once: true });
+}
+
+/* ---------- Boot ---------- */
+
+const canvas = document.getElementById('scene');
+const refs = createScene(canvas);
+
+if (refs) {
+  const animator = createAnimator(refs);
+  animator.start();
+  createUI(animator);
+} else {
+  // No WebGL: keep the invitation working with a static illustration.
+  canvas.remove();
+  document.getElementById('fallback').style.display = 'grid';
+  createUI({ mould: () => Promise.resolve() });
+}
+</script>
+</body>
+</html>
