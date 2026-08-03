@@ -350,8 +350,7 @@ function createScene(canvas) {
 
   const heart = new THREE.Mesh(createHeartGeometry(), toon(COLOR.clayPale));
   heart.scale.setScalar(1.05);
-  heart.position.y = -0.28;
-  scene.add(heart);
+  scene.add(heart);   // position.y is set by seatOnWheel() on the first frame
 
   // Clay specks flung off during moulding; parked out of sight until then.
   const specks = [];
@@ -408,6 +407,20 @@ function createAnimator(refs) {
 
   const paleColor = new THREE.Color(COLOR.clayPale);
   const richColor = new THREE.Color(COLOR.clayRich);
+
+  // Half-height of the heart at scale 1, measured from the geometry itself so
+  // the maths stays right if the shape is ever retuned.
+  heart.geometry.computeBoundingBox();
+  const HEART_HALF = heart.geometry.boundingBox.max.y;
+  const WHEEL_TOP = -1.35;
+
+  /**
+   * Keeps the bottom tip of the heart resting on the wheel whatever its scale.
+   * Scaling alone grows the mesh around its centre, which sinks it into the disc.
+   */
+  function seatOnWheel(scaleY) {
+    heart.position.y = WHEEL_TOP + HEART_HALF * scaleY - 0.06;
+  }
   const speckDirs = specks.map((_, i) => {
     const a = (i / specks.length) * Math.PI * 2;
     return new THREE.Vector3(Math.cos(a), 0.55 + (i % 3) * 0.3, Math.sin(a) * 0.55);
@@ -429,11 +442,13 @@ function createAnimator(refs) {
       // Squash under the potter's hands, then spring taller than it started.
       const squash = Math.sin(Math.min(mouldT / 0.45, 1) * Math.PI);
       const rise = mouldT > 0.45 ? easeBack((mouldT - 0.45) / 0.55) : 0;
+      const sy = 1.05 - squash * 0.28 + rise * 0.17;
       heart.scale.set(
         1.05 + squash * 0.20 - rise * 0.05,
-        1.05 - squash * 0.28 + rise * 0.17,
+        sy,
         1.05 + squash * 0.20 - rise * 0.05
       );
+      seatOnWheel(sy);
       heart.material.color.copy(paleColor).lerp(richColor, easeOut(mouldT));
 
       // Specks fly out and fall back within the first half of the moulding.
@@ -453,6 +468,7 @@ function createAnimator(refs) {
         state = 'settled';
         specks.forEach((s) => { s.visible = false; });
         heart.scale.setScalar(1.17);
+        seatOnWheel(1.17);
         heart.material.color.copy(richColor);
         onSettled?.();
         onSettled = null;
@@ -462,6 +478,7 @@ function createAnimator(refs) {
       const breathe = REDUCED ? 0 : Math.sin(elapsed * 1.7) * 0.022;
       const base = state === 'settled' ? 1.17 : 1.05;
       heart.scale.set(base + breathe, base - breathe, base + breathe);
+      seatOnWheel(base - breathe);
     }
 
     wheel.rotation.y += spin * dt;
