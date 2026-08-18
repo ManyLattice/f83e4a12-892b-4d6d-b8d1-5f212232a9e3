@@ -11,13 +11,17 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Вика, эти выходные">
 <meta property="og:description" content="Выбирай">
-<meta property="og:image" content="https://manylattice.github.io/weekend-date/images/picnic.webp">
+<meta property="og:image" content="https://manylattice.github.io/weekend-date/images/fork.webp">
 
 <!-- In-app browsers (Telegram, Instagram) paint their chrome over the
-     page and tint it with this colour. Sampled between the two palettes
-     so neither half shows a bright band above or below it. -->
-<meta name="theme-color" content="#6E6A3C">
+     page and tint it with this colour. Sampled from the evening sky of
+     the fork illustration so the chrome blends into the artwork. -->
+<meta name="theme-color" content="#C79A5C">
 
+<link rel="preload" as="image" href="images/fork.webp">
+<!-- Both outcomes are preloaded: the switch after a tap has to be
+     instant, and a half-loaded scene would show a blank screen at the
+     one moment the page is supposed to feel like an answer. -->
 <link rel="preload" as="image" href="images/picnic.webp">
 <link rel="preload" as="image" href="images/horses.webp">
 
@@ -36,55 +40,115 @@
 html, body { height: 100%; }
 
 body {
-  background-color: #6E6A3C;
+  /* Only ever visible for an instant before the artwork paints.
+     Sampled from the illustration's own sky. */
+  background-color: #E8B978;
   color: var(--ink);
   font-family: var(--font-serif);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;          /* single screen, never scrolls */
 }
 
-/* ===== Fork ===== */
-.fork {
-  display: flex;
-  flex-direction: column;    /* mobile first: halves stack */
+/* ===== Stage =====
+   All three illustrations are stacked in the same box. Only one is
+   opaque at a time, so switching scenes is a cross-fade rather than a
+   load - nothing ever has to be fetched mid-gesture. */
+.stage {
+  position: relative;
   height: 100dvh;
   width: 100%;
+  overflow: hidden;
 }
 
-/* Each half is a real <button>: it must be reachable from a keyboard
-   and announced as actionable, which a <div> with a click handler is not. */
-.half {
-  position: relative;
+.scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.scene.is-active { opacity: 1; }
+
+
+/* Focal points, per illustration. The fork is framed so the blanket and
+   the horses sit inside the safe area on a phone; centring it keeps both
+   in view. */
+.scene--fork   { object-position: 50% 50%; }
+
+/* A wide screen crops this tall artwork nearly in half top-to-bottom,
+   and no anchor point can hold the couple, the blanket and the horses at
+   once - each choice of focus drops one of them. Since the fork is the
+   one image whose edges ARE the content, show it whole here and let the
+   sides fill with its own colour. Phones, the real audience, keep the
+   full-bleed crop above. */
+@media (orientation: landscape) {
+  .scene--fork {
+    object-fit: contain;
+    background: #C98F53;
+  }
+
+}
+.scene--picnic { object-position: 50% 64%; }
+.scene--horses { object-position: 45% 50%; }
+
+/* Readability layer: white text has to survive both a pale sky and a
+   sunlit field, and the resting dim also gives the hover states
+   something to lift. */
+.stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 24, 16, 0.26);
+  pointer-events: none;
+  transition: background var(--dur) var(--ease);
+  z-index: 1;
+}
+
+/* ===== Choice zones =====
+   Two invisible halves laid over the fork. They are real <button>s so
+   the choice is reachable from a keyboard, not just from a tap. */
+.zones {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  z-index: 2;
+}
+
+/* On a wide screen the fork is letterboxed, so the zones are pulled in
+   to the artwork's own edges - clicking the empty side margins must not
+   pick a road. Declared after `.zones` so it wins the cascade. */
+@media (orientation: landscape) {
+  .zones {
+    width: min(100%, calc(100dvh * 941 / 1672));
+    inset: 0 auto 0 50%;
+    transform: translateX(-50%);
+  }
+}
+
+.zone {
   flex: 1 1 50%;
-  min-height: 0;             /* lets flex shrink the half below content size */
   border: 0;
   padding: 0;
   background: none;
   cursor: pointer;
-  overflow: hidden;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+  transition: background var(--dur) var(--ease);
 }
 
-.half__art {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  /* Per-half focal points: the subjects sit off-centre in both
-     illustrations, so each one is anchored separately. Tuned in Task 5. */
-  object-position: center;
+/* Hover lifts the side you reach for and leaves the other alone -
+   the road you lean toward gets brighter. */
+@media (hover: hover) {
+  .zone:hover { background: rgba(255, 244, 214, 0.13); }
 }
 
-/* Resting dim: both halves sit slightly darkened so that choosing one
-   can visibly "light it up", and so white text stays readable on any
-   part of either illustration. */
-.half::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(28, 24, 16, 0.28);
-  pointer-events: none;
-}
+.zone:active { background: rgba(28, 24, 16, 0.12); }
+
+/* Once chosen, the zones stop existing - there is no way back. */
+body.has-choice .zones { display: none; }
 
 /* ===== Title ===== */
 .title {
@@ -99,47 +163,9 @@ body {
   letter-spacing: 0.01em;
   line-height: 1.2;
   text-shadow: 0 2px 18px rgba(20, 16, 10, 0.55);
-  pointer-events: none;      /* never blocks a tap on the halves */
-  z-index: 2;
+  pointer-events: none;      /* never blocks a tap on the zones */
+  z-index: 3;
 }
-
-/* ===== Desktop: halves sit side by side ===== */
-@media (min-width: 760px) and (orientation: landscape) {
-  .fork { flex-direction: row; }
-}
-
-/* ===== Chosen / dismissed halves ===== */
-.half {
-  transition-property: flex-grow, flex-basis, opacity, transform;
-  transition-duration: var(--dur);
-  transition-timing-function: var(--ease);
-}
-
-/* Interactive feedback - the illustrations carry no "tap me" label,
-   so the affordance has to come from behaviour alone. */
-.half:active { transform: scale(0.98); }
-
-.half::after { transition: background var(--dur) var(--ease); }
-
-@media (hover: hover) {
-  /* Hovering lifts the dim on one half and deepens it on the other,
-     so the pair reads as a choice rather than as a picture. */
-  .fork:hover .half::after { background: rgba(28, 24, 16, 0.42); }
-  .fork .half:hover::after { background: rgba(28, 24, 16, 0.10); }
-}
-
-/* The chosen half takes the whole screen; the other collapses away. */
-.half.is-chosen { flex-basis: 100%; }
-.half.is-chosen::after { background: rgba(28, 24, 16, 0.34); }
-.half.is-gone {
-  flex-basis: 0%;
-  flex-grow: 0;
-  opacity: 0;
-}
-
-/* Once chosen, nothing on the fork is clickable any more -
-   there is no way back by design. */
-body.has-choice .half { cursor: default; pointer-events: none; }
 
 /* ===== CTA ===== */
 .cta {
@@ -147,7 +173,7 @@ body.has-choice .half { cursor: default; pointer-events: none; }
   left: 50%;
   bottom: calc(8vh + env(safe-area-inset-bottom));
   transform: translate(-50%, 12px);
-  z-index: 3;
+  z-index: 4;
   display: inline-block;
   padding: 16px 44px;
   border-radius: 999px;
@@ -173,65 +199,30 @@ body.has-choice .half { cursor: default; pointer-events: none; }
   transform: translate(-50%, 0);
 }
 
-/* ===== Reduced motion ===== */
-@media (prefers-reduced-motion: reduce) {
-  .half, .half::after, .cta { transition-duration: 1ms; }
-  .half:active { transform: none; }
-}
-
-/* ===== No JS =====
-   Without the script the fork simply stays as it is: both illustrations
-   visible, choice inert. A degraded page, never a blank one. */
-.no-js .cta { display: none; }
-
 /* ===== Breathing =====
    The page carries no "tap me" label, so stillness would read as a
-   static picture. A slow zoom keeps both halves alive. The two are
-   offset by a negative delay so they never pulse in unison - in sync
-   they would read as one moving backdrop rather than two choices. */
+   static picture. A slow zoom keeps the scene alive until a choice
+   freezes it. */
 @keyframes breathe {
   0%   { transform: scale(1.00); }
-  50%  { transform: scale(1.045); }
+  50%  { transform: scale(1.04); }
   100% { transform: scale(1.00); }
 }
 
-.half__art {
-  animation: breathe 9s ease-in-out infinite;
-  will-change: transform;
-}
+.scene--fork.is-active { animation: breathe 11s ease-in-out infinite; }
+body.has-choice .scene { animation: none; }
 
-/* Negative delay starts this half mid-cycle instead of waiting. */
-[data-choice="horses"] .half__art { animation-delay: -4.5s; }
-
-/* Once a choice is made the movement has done its job: freeze it so
-   the opening half and the appearing button own the attention. */
-.half.is-chosen .half__art,
-.half.is-gone .half__art { animation: none; }
-
+/* ===== Reduced motion ===== */
 @media (prefers-reduced-motion: reduce) {
-  .half__art { animation: none; }
+  .scene, .stage::after, .cta, .zone { transition-duration: 1ms; }
+  .scene--fork.is-active { animation: none; }
 }
 
-/* ===== Focal points =====
-   Both subjects sit off the geometric centre: the picnic scene lives in
-   the lower two thirds of its frame, and the horse stands left of centre
-   at roughly 45% height. A single object-position cannot serve both the
-   narrow half and the full-screen state, so each is anchored per state. */
-
-/* Fork: tall narrow crop */
-[data-choice="picnic"] .half__art { object-position: 50% 68%; }
-[data-choice="horses"] .half__art { object-position: 42% 52%; }
-
-/* Opened: wide crop - pull back toward the middle so the subject
-   does not ride the top edge once the frame becomes short and wide. */
-[data-choice="picnic"].is-chosen .half__art { object-position: 50% 60%; }
-[data-choice="horses"].is-chosen .half__art { object-position: 45% 48%; }
-
-.half__art { transition: object-position var(--dur) var(--ease); }
-
-@media (prefers-reduced-motion: reduce) {
-  .half__art { transition-duration: 1ms; }
-}
+/* ===== No JS =====
+   Without the script the fork stays on screen and the choice is inert:
+   a degraded page, never a blank one. */
+.no-js .cta { display: none; }
+.no-js .scene--fork { opacity: 1; }
 </style>
 </head>
 <body>
@@ -239,20 +230,23 @@ body.has-choice .half { cursor: default; pointer-events: none; }
 <!-- Fallback copy for the no-JS case; the script overwrites it from CONFIG. -->
 <h1 class="title">Вика, эти выходные</h1>
 
-<div class="fork">
-  <button class="half" type="button" data-choice="picnic">
-    <img class="half__art" src="images/picnic.webp" alt="Пикник на траве">
-  </button>
-  <button class="half" type="button" data-choice="horses">
-    <img class="half__art" src="images/horses.webp" alt="Лошадь в степи">
-  </button>
+<div class="stage">
+  <img class="scene scene--fork is-active" src="images/fork.webp"
+       alt="Пара стоит перед развилкой: слева пикник у пруда, справа лошади в степи">
+  <img class="scene scene--picnic" src="images/picnic.webp" alt="">
+  <img class="scene scene--horses" src="images/horses.webp" alt="">
+
+  <div class="zones">
+    <button class="zone" type="button" data-choice="picnic" aria-label="Пикник"></button>
+    <button class="zone" type="button" data-choice="horses" aria-label="Лошади"></button>
+  </div>
 </div>
 
 <a class="cta" href="#" target="_blank" rel="noopener"></a>
 
 <script>
 // The engine is taking over: drop the no-JS safety class.
-// If this line never runs, CSS keeps the fork in its visible state.
+// If this line never runs, CSS keeps the fork on screen.
 document.documentElement.classList.remove("no-js");
 
 // ============================================================
@@ -276,8 +270,7 @@ const titleEl = document.querySelector(".title");
 titleEl.textContent = CONFIG.title;
 
 // The <title> tag is authored in the markup so the tab is labelled even
-// without JS; re-applying it here keeps CONFIG the single source of truth
-// if the wording is ever changed in one place only.
+// without JS; re-applying it here keeps CONFIG the single source of truth.
 document.title = CONFIG.title;
 
 // ============================================================
@@ -301,11 +294,11 @@ function buildTelegramUrl(username, text) {
 // ============================================================
 // Choice
 // ============================================================
-const halves = document.querySelectorAll(".half");
+const forkScene = document.querySelector(".scene--fork");
 const ctaEl = document.querySelector(".cta");
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// The CTA appears only after the half has finished opening, so the two
+// The CTA appears only after the scene has settled, so the two
 // movements read as one gesture instead of competing for attention.
 const CTA_DELAY = reduceMotion ? 0 : 700;
 
@@ -320,11 +313,8 @@ function choose(choice) {
   if (decided) return;
   decided = true;
 
-  halves.forEach((half) => {
-    const isChosen = half.dataset.choice === choice;
-    half.classList.add(isChosen ? "is-chosen" : "is-gone");
-    half.setAttribute("aria-hidden", isChosen ? "false" : "true");
-  });
+  forkScene.classList.remove("is-active");
+  document.querySelector(`.scene--${choice}`).classList.add("is-active");
 
   document.body.classList.add("has-choice");
   titleEl.textContent = CONFIG.chosen[choice];
@@ -335,8 +325,8 @@ function choose(choice) {
   window.setTimeout(() => ctaEl.classList.add("is-visible"), CTA_DELAY);
 }
 
-halves.forEach((half) => {
-  half.addEventListener("click", () => choose(half.dataset.choice));
+document.querySelectorAll(".zone").forEach((zone) => {
+  zone.addEventListener("click", () => choose(zone.dataset.choice));
 });
 </script>
 
