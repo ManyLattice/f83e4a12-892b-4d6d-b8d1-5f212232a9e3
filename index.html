@@ -172,12 +172,10 @@ body {
   14%, 28%      { opacity: 1; }
 }
 
-/* Hide them where hover already does the job, and the moment a choice
-   is made. */
-@media (hover: hover) {
-  .hint { display: none; }
-}
-
+/* Retired on first interaction - a pointer entering the picture counts
+   as much as a finger landing on it. Deliberately NOT gated behind
+   `@media (hover: hover)`: many phone browsers claim hover support, and
+   the hint used to disappear on the very devices that needed it. */
 /* Once chosen, the zones stop existing - there is no way back. */
 body.has-choice .zones { display: none; }
 
@@ -409,12 +407,19 @@ document.querySelectorAll(".zone").forEach((zone) => {
   zone.addEventListener("click", () => choose(zone.dataset.choice));
 });
 
-// Once a finger has landed anywhere the hints have said what they had to
-// say; leaving them pulsing would nag. `once` unbinds after the first
-// touch, and passive keeps the listener off the scroll path.
-document.addEventListener("touchstart", () => {
+// The hint has said what it had to say as soon as the page is engaged
+// with; leaving it sweeping would nag. Either input retires it - a
+// finger landing, or a pointer entering one of the zones. `once` unbinds
+// each listener after it fires, and passive keeps them off the scroll
+// path.
+function retireHints() {
   document.body.classList.add("is-touched");
-}, { once: true, passive: true });
+}
+
+document.addEventListener("touchstart", retireHints, { once: true, passive: true });
+document.querySelectorAll(".zone").forEach((zone) => {
+  zone.addEventListener("pointerenter", retireHints, { once: true });
+});
 </script>
 
 </body>
