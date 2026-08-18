@@ -107,6 +107,82 @@ body {
 @media (min-width: 760px) and (orientation: landscape) {
   .fork { flex-direction: row; }
 }
+
+/* ===== Chosen / dismissed halves ===== */
+.half {
+  transition-property: flex-grow, flex-basis, opacity, transform;
+  transition-duration: var(--dur);
+  transition-timing-function: var(--ease);
+}
+
+/* Interactive feedback - the illustrations carry no "tap me" label,
+   so the affordance has to come from behaviour alone. */
+.half:active { transform: scale(0.98); }
+
+.half::after { transition: background var(--dur) var(--ease); }
+
+@media (hover: hover) {
+  /* Hovering lifts the dim on one half and deepens it on the other,
+     so the pair reads as a choice rather than as a picture. */
+  .fork:hover .half::after { background: rgba(28, 24, 16, 0.42); }
+  .fork .half:hover::after { background: rgba(28, 24, 16, 0.10); }
+}
+
+/* The chosen half takes the whole screen; the other collapses away. */
+.half.is-chosen { flex-basis: 100%; }
+.half.is-chosen::after { background: rgba(28, 24, 16, 0.34); }
+.half.is-gone {
+  flex-basis: 0%;
+  flex-grow: 0;
+  opacity: 0;
+}
+
+/* Once chosen, nothing on the fork is clickable any more -
+   there is no way back by design. */
+body.has-choice .half { cursor: default; pointer-events: none; }
+
+/* ===== CTA ===== */
+.cta {
+  position: fixed;
+  left: 50%;
+  bottom: calc(8vh + env(safe-area-inset-bottom));
+  transform: translate(-50%, 12px);
+  z-index: 3;
+  display: inline-block;
+  padding: 16px 44px;
+  border-radius: 999px;
+  background: #FFFFFF;
+  color: #2C2418;
+  font-size: 19px;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  box-shadow: 0 8px 30px rgba(20, 16, 10, 0.35);
+  /* Hidden until a choice is made, and inert while hidden. */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 380ms var(--ease),
+              transform 380ms var(--ease),
+              visibility 380ms;
+}
+
+.cta.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+/* ===== Reduced motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  .half, .half::after, .cta { transition-duration: 1ms; }
+  .half:active { transform: none; }
+}
+
+/* ===== No JS =====
+   Without the script the fork simply stays as it is: both illustrations
+   visible, choice inert. A degraded page, never a blank one. */
+.no-js .cta { display: none; }
 </style>
 </head>
 <body>
@@ -121,6 +197,8 @@ body {
     <img class="half__art" src="images/horses.webp" alt="Лошадь в степи">
   </button>
 </div>
+
+<a class="cta" href="#" target="_blank" rel="noopener"></a>
 
 <script>
 // The engine is taking over: drop the no-JS safety class.
@@ -146,6 +224,65 @@ const CONFIG = {
 
 const titleEl = document.querySelector(".title");
 titleEl.textContent = CONFIG.title;
+
+// ============================================================
+// Telegram link
+// ============================================================
+
+/**
+ * Builds a t.me link that opens a private chat with the text
+ * pre-filled in the input field. The text is NOT sent
+ * automatically - pressing send stays her decision.
+ */
+function buildTelegramUrl(username, text) {
+  // Telegram usernames are shown as "@name" everywhere, so a leading "@"
+  // is the likeliest thing to end up in CONFIG.telegram. Strip it -
+  // t.me links must not contain it.
+  const cleanUsername = username.trim().replace(/^@/, "");
+  const base = `https://t.me/${cleanUsername}`;
+  return text ? `${base}?text=${encodeURIComponent(text)}` : base;
+}
+
+// ============================================================
+// Choice
+// ============================================================
+const halves = document.querySelectorAll(".half");
+const ctaEl = document.querySelector(".cta");
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// The CTA appears only after the half has finished opening, so the two
+// movements read as one gesture instead of competing for attention.
+const CTA_DELAY = reduceMotion ? 0 : 700;
+
+let decided = false;
+
+/**
+ * Commits to one of the two options. There is deliberately no way back:
+ * re-choosing would turn an impulse into browsing a menu. Reloading the
+ * page is the only reset.
+ */
+function choose(choice) {
+  if (decided) return;
+  decided = true;
+
+  halves.forEach((half) => {
+    const isChosen = half.dataset.choice === choice;
+    half.classList.add(isChosen ? "is-chosen" : "is-gone");
+    half.setAttribute("aria-hidden", isChosen ? "false" : "true");
+  });
+
+  document.body.classList.add("has-choice");
+  titleEl.textContent = CONFIG.chosen[choice];
+
+  ctaEl.textContent = CONFIG.cta;
+  ctaEl.href = buildTelegramUrl(CONFIG.telegram, CONFIG.reply[choice]);
+
+  window.setTimeout(() => ctaEl.classList.add("is-visible"), CTA_DELAY);
+}
+
+halves.forEach((half) => {
+  half.addEventListener("click", () => choose(half.dataset.choice));
+});
 </script>
 
 </body>
