@@ -121,8 +121,8 @@
 | После пикника | Значит, пикник | `images/title-picnic.webp` |
 | После лошадей | Значит, лошади | `images/title-horses.webp` |
 | Кнопка | Написать | живой текст, системный serif |
-| В Telegram (пикник) | Давай пикник | из `CONFIG` |
-| В Telegram (лошади) | Давай лошадей | из `CONFIG` |
+| В Telegram (пикник) | Пикничок 🧺🥰 | из `CONFIG` |
+| В Telegram (лошади) | Лошкадки 🐴🥰 | из `CONFIG` |
 | og:description | Выбирай | разметка |
 
 Настоящие слова живут в `<h1 class="title-text">`, визуально скрытом:
