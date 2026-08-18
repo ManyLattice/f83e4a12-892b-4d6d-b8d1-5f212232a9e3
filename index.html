@@ -134,36 +134,42 @@ body {
 
 .zone:active { background: rgba(28, 24, 16, 0.12); }
 
-/* ===== Touch hints =====
-   A pointer device gets the hover states above; a phone gets nothing, and
-   nothing on this page says "the sides are tappable". These two slow
-   pulses sit on the roads and take turns, so the eye reads them as one
-   choice with two options rather than as decoration. They cost the image
-   very little and disappear for good on the first touch. */
+/* ===== Side sweep =====
+   A pointer device gets the hover states above; a phone gets nothing,
+   and nothing else on this page says the two sides are tappable. Each
+   side lifts in turn, so the pair reads as one choice with two options.
+   A tint over the whole half, rather than a marker sitting on it, keeps
+   the illustration unobstructed. */
 .hint {
-  display: block;            /* an inline span ignores width/height */
+  display: block;
   position: absolute;
-  left: 50%;
-  top: 58%;
-  width: 62px;
-  height: 62px;
-  margin: -31px 0 0 -31px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 248, 232, 0.85);
-  background: rgba(255, 248, 232, 0.10);
+  inset: 0;
   pointer-events: none;
   opacity: 0;
-  animation: pulse 3.6s ease-in-out infinite;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 243, 212, 0.08) 0%,
+    rgba(255, 243, 212, 0.26) 55%,
+    rgba(255, 238, 200, 0.34) 100%
+  );
+  /* Feathered along the edge that meets the other half, so the lift has
+     no seam down the centre of the picture. */
+  -webkit-mask-image: linear-gradient(to left, #000 25%, transparent 96%);
+  mask-image: linear-gradient(to left, #000 25%, transparent 96%);
+  animation: sweep 6.4s ease-in-out infinite;
 }
 
-/* The right hint runs half a cycle behind the left one: alternating
-   reads as "either one", while pulsing together reads as decoration. */
-[data-choice="horses"] .hint { animation-delay: 1.8s; }
+/* The right side runs half a cycle behind the left: alternating reads as
+   "either one", while lifting together reads as a flicker. */
+[data-choice="horses"] .hint {
+  animation-delay: 3.2s;
+  -webkit-mask-image: linear-gradient(to right, #000 25%, transparent 96%);
+  mask-image: linear-gradient(to right, #000 25%, transparent 96%);
+}
 
-@keyframes pulse {
-  0%, 62%, 100% { opacity: 0;    transform: scale(0.82); }
-  18%           { opacity: 0.95; transform: scale(1); }
-  42%           { opacity: 0.5;  transform: scale(1.18); }
+@keyframes sweep {
+  0%, 42%, 100% { opacity: 0; }
+  14%, 28%      { opacity: 1; }
 }
 
 /* Hide them where hover already does the job, and the moment a choice
@@ -172,14 +178,14 @@ body {
   .hint { display: none; }
 }
 
+/* Once chosen, the zones stop existing - there is no way back. */
+body.has-choice .zones { display: none; }
+
 body.has-choice .hint,
 body.is-touched .hint {
   animation: none;
   opacity: 0;
 }
-
-/* Once chosen, the zones stop existing - there is no way back. */
-body.has-choice .zones { display: none; }
 
 /* ===== Title =====
    Lettering images, cross-faded in place. They are decorative duplicates
@@ -259,25 +265,18 @@ body.has-choice .zones { display: none; }
   transform: translate(-50%, 0);
 }
 
-/* ===== Breathing =====
-   The page carries no "tap me" label, so stillness would read as a
-   static picture. A slow zoom keeps the scene alive until a choice
-   freezes it. */
-@keyframes breathe {
-  0%   { transform: scale(1.00); }
-  50%  { transform: scale(1.04); }
-  100% { transform: scale(1.00); }
-}
-
-.scene--fork.is-active { animation: breathe 11s ease-in-out infinite; }
-body.has-choice .scene { animation: none; }
+/* The scene itself never moves. A zoom here scaled the image past the
+   viewport and, at the bottom of each cycle, let the page background
+   show as a hairline down both edges. What the page needs to say is
+   "these two sides are choosable", and the sides now say it themselves
+   (see Side sweep). */
 
 /* ===== Reduced motion ===== */
 @media (prefers-reduced-motion: reduce) {
   .scene, .stage::after, .cta, .zone { transition-duration: 1ms; }
-  /* Keep the hints, but hold them still and visible - the affordance is
-     needed even when motion is not wanted. */
-  .hint { animation: none; opacity: 0.75; }
+  /* Hold both sides faintly lit instead of sweeping - the affordance is
+     needed even when motion is not. */
+  .hint { animation: none; opacity: 0.6; }
   .scene--fork.is-active { animation: none; }
 }
 
