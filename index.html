@@ -18,6 +18,10 @@
      the fork illustration so the chrome blends into the artwork. -->
 <meta name="theme-color" content="#C79A5C">
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&display=swap" rel="stylesheet">
+
 <link rel="preload" as="image" href="images/fork.webp">
 <!-- Both outcomes are preloaded: the switch after a tap has to be
      instant, and a half-loaded scene would show a blank screen at the
@@ -31,6 +35,9 @@
   --dur: 650ms;
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ink: #FFFFFF;
+  /* Cormorant carries the headings; Georgia stays as the fallback that
+     paints first and the safety net if the webfont never arrives. */
+  --font-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   --font-serif: Georgia, "Times New Roman", "Iowan Old Style", serif;
 }
 
@@ -156,12 +163,13 @@ body.has-choice .zones { display: none; }
   top: calc(5vh + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
-  width: min(100% - 40px, 640px);
+  width: min(100% - 64px, 560px);
   text-align: center;
-  font-size: clamp(28px, 7vw, 44px);
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  line-height: 1.2;
+  font-family: var(--font-display);
+  font-size: clamp(30px, 7.2vw, 52px);
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
   text-shadow: 0 2px 18px rgba(20, 16, 10, 0.55);
   pointer-events: none;      /* never blocks a tap on the zones */
   z-index: 3;
@@ -179,8 +187,10 @@ body.has-choice .zones { display: none; }
   border-radius: 999px;
   background: #FFFFFF;
   color: #2C2418;
-  font-size: 19px;
-  letter-spacing: 0.02em;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
   text-decoration: none;
   box-shadow: 0 8px 30px rgba(20, 16, 10, 0.35);
   /* Hidden until a choice is made, and inert while hidden. */
