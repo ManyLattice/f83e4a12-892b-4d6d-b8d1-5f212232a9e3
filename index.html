@@ -183,6 +183,34 @@ body.has-choice .half { cursor: default; pointer-events: none; }
    Without the script the fork simply stays as it is: both illustrations
    visible, choice inert. A degraded page, never a blank one. */
 .no-js .cta { display: none; }
+
+/* ===== Breathing =====
+   The page carries no "tap me" label, so stillness would read as a
+   static picture. A slow zoom keeps both halves alive. The two are
+   offset by a negative delay so they never pulse in unison - in sync
+   they would read as one moving backdrop rather than two choices. */
+@keyframes breathe {
+  0%   { transform: scale(1.00); }
+  50%  { transform: scale(1.045); }
+  100% { transform: scale(1.00); }
+}
+
+.half__art {
+  animation: breathe 9s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Negative delay starts this half mid-cycle instead of waiting. */
+[data-choice="horses"] .half__art { animation-delay: -4.5s; }
+
+/* Once a choice is made the movement has done its job: freeze it so
+   the opening half and the appearing button own the attention. */
+.half.is-chosen .half__art,
+.half.is-gone .half__art { animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .half__art { animation: none; }
+}
 </style>
 </head>
 <body>
