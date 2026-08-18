@@ -122,5 +122,31 @@ body {
   </button>
 </div>
 
+<script>
+// The engine is taking over: drop the no-JS safety class.
+// If this line never runs, CSS keeps the fork in its visible state.
+document.documentElement.classList.remove("no-js");
+
+// ============================================================
+// CONFIG - the only place to edit when the wording changes
+// ============================================================
+const CONFIG = {
+  title: "Вика, эти выходные",
+  chosen: {
+    picnic: "Значит, пикник",
+    horses: "Значит, лошади"
+  },
+  cta: "Написать",
+  reply: {
+    picnic: "Давай пикник",
+    horses: "Давай лошадей"
+  },
+  telegram: "ManyLattice"
+};
+
+const titleEl = document.querySelector(".title");
+titleEl.textContent = CONFIG.title;
+</script>
+
 </body>
 </html>
