@@ -80,24 +80,16 @@ body {
 .scene.is-active { opacity: 1; }
 
 
-/* Focal points, per illustration. The fork is framed so the blanket and
-   the horses sit inside the safe area on a phone; centring it keeps both
-   in view. */
-.scene--fork   { object-position: 50% 50%; }
-
-/* A wide screen crops this tall artwork nearly in half top-to-bottom,
-   and no anchor point can hold the couple, the blanket and the horses at
-   once - each choice of focus drops one of them. Since the fork is the
-   one image whose edges ARE the content, show it whole here and let the
-   sides fill with its own colour. Phones, the real audience, keep the
-   full-bleed crop above. */
-@media (orientation: landscape) {
-  .scene--fork {
-    object-fit: contain;
-    background: #C98F53;
-  }
-
+/* The fork is the one illustration whose EDGES are the content: the
+   picnic blanket sits at 0-12% of its width and the horses at 88-100%.
+   Any `cover` crop on a tall phone cuts 9% off each side and takes both
+   with it, so this one is always contained. The cost is a shallow band
+   above and below; the title lives in the upper one. */
+.scene--fork {
+  object-fit: contain;
+  background: #C98F53;
 }
+
 .scene--picnic { object-position: 50% 64%; }
 .scene--horses { object-position: 45% 50%; }
 
@@ -124,15 +116,18 @@ body {
   z-index: 2;
 }
 
-/* On a wide screen the fork is letterboxed, so the zones are pulled in
-   to the artwork's own edges - clicking the empty side margins must not
-   pick a road. Declared after `.zones` so it wins the cascade. */
-@media (orientation: landscape) {
-  .zones {
-    width: min(100%, calc(100dvh * 941 / 1672));
-    inset: 0 auto 0 50%;
-    transform: translateX(-50%);
-  }
+/* The fork is letterboxed on every screen now, so the zones are clamped
+   to the artwork's own box - a tap on the empty bands must not pick a
+   road. Both terms use the artwork's 941x1672 ratio: width is capped by
+   the viewport height, height by the viewport width. Declared after
+   `.zones` so it wins the cascade. */
+.zones {
+  width: min(100%, calc(100dvh * 941 / 1672));
+  height: min(100%, calc(100vw * 1672 / 941));
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .zone {
@@ -153,6 +148,50 @@ body {
 }
 
 .zone:active { background: rgba(28, 24, 16, 0.12); }
+
+/* ===== Touch hints =====
+   A pointer device gets the hover states above; a phone gets nothing, and
+   nothing on this page says "the sides are tappable". These two slow
+   pulses sit on the roads and take turns, so the eye reads them as one
+   choice with two options rather than as decoration. They cost the image
+   very little and disappear for good on the first touch. */
+.hint {
+  display: block;            /* an inline span ignores width/height */
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  width: 62px;
+  height: 62px;
+  margin: -31px 0 0 -31px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 248, 232, 0.85);
+  background: rgba(255, 248, 232, 0.10);
+  pointer-events: none;
+  opacity: 0;
+  animation: pulse 3.6s ease-in-out infinite;
+}
+
+/* The right hint runs half a cycle behind the left one: alternating
+   reads as "either one", while pulsing together reads as decoration. */
+[data-choice="horses"] .hint { animation-delay: 1.8s; }
+
+@keyframes pulse {
+  0%, 62%, 100% { opacity: 0;    transform: scale(0.82); }
+  18%           { opacity: 0.95; transform: scale(1); }
+  42%           { opacity: 0.5;  transform: scale(1.18); }
+}
+
+/* Hide them where hover already does the job, and the moment a choice
+   is made. */
+@media (hover: hover) {
+  .hint { display: none; }
+}
+
+body.has-choice .hint,
+body.is-touched .hint {
+  animation: none;
+  opacity: 0;
+}
 
 /* Once chosen, the zones stop existing - there is no way back. */
 body.has-choice .zones { display: none; }
@@ -225,6 +264,9 @@ body.has-choice .scene { animation: none; }
 /* ===== Reduced motion ===== */
 @media (prefers-reduced-motion: reduce) {
   .scene, .stage::after, .cta, .zone { transition-duration: 1ms; }
+  /* Keep the hints, but hold them still and visible - the affordance is
+     needed even when motion is not wanted. */
+  .hint { animation: none; opacity: 0.75; }
   .scene--fork.is-active { animation: none; }
 }
 
@@ -247,8 +289,12 @@ body.has-choice .scene { animation: none; }
   <img class="scene scene--horses" src="images/horses.webp" alt="">
 
   <div class="zones">
-    <button class="zone" type="button" data-choice="picnic" aria-label="Пикник"></button>
-    <button class="zone" type="button" data-choice="horses" aria-label="Лошади"></button>
+    <button class="zone" type="button" data-choice="picnic" aria-label="Пикник">
+      <span class="hint" aria-hidden="true"></span>
+    </button>
+    <button class="zone" type="button" data-choice="horses" aria-label="Лошади">
+      <span class="hint" aria-hidden="true"></span>
+    </button>
   </div>
 </div>
 
@@ -338,6 +384,13 @@ function choose(choice) {
 document.querySelectorAll(".zone").forEach((zone) => {
   zone.addEventListener("click", () => choose(zone.dataset.choice));
 });
+
+// Once a finger has landed anywhere the hints have said what they had to
+// say; leaving them pulsing would nag. `once` unbinds after the first
+// touch, and passive keeps the listener off the scroll path.
+document.addEventListener("touchstart", () => {
+  document.body.classList.add("is-touched");
+}, { once: true, passive: true });
 </script>
 
 </body>
