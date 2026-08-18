@@ -18,16 +18,13 @@
      the fork illustration so the chrome blends into the artwork. -->
 <meta name="theme-color" content="#C79A5C">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&display=swap" rel="stylesheet">
-
 <link rel="preload" as="image" href="images/fork.webp">
 <!-- Both outcomes are preloaded: the switch after a tap has to be
      instant, and a half-loaded scene would show a blank screen at the
      one moment the page is supposed to feel like an answer. -->
 <link rel="preload" as="image" href="images/picnic.webp">
 <link rel="preload" as="image" href="images/horses.webp">
+<link rel="preload" as="image" href="images/title-fork.webp">
 
 <style>
 /* ===== Variables ===== */
@@ -35,9 +32,8 @@
   --dur: 650ms;
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ink: #FFFFFF;
-  /* Cormorant carries the headings; Georgia stays as the fallback that
-     paints first and the safety net if the webfont never arrives. */
-  --font-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  /* The headings are lettering artwork now, so the only type left on the
+     page is the button - system serif, no webfont to wait for. */
   --font-serif: Georgia, "Times New Roman", "Iowan Old Style", serif;
 }
 
@@ -196,22 +192,56 @@ body.is-touched .hint {
 /* Once chosen, the zones stop existing - there is no way back. */
 body.has-choice .zones { display: none; }
 
-/* ===== Title ===== */
-.title {
+/* ===== Title =====
+   Lettering images, cross-faded in place. They are decorative duplicates
+   of the <h1> text, so they are hidden from assistive tech. */
+.titles {
   position: fixed;
-  top: calc(5vh + env(safe-area-inset-top));
+  /* Sits just inside the top edge of the painted artwork, not of the
+     viewport - otherwise it lands in the letterbox band above the sky.
+     The band's height is half the difference between the screen and the
+     contained image. */
+  top: calc(
+    (100dvh - min(100dvh, 100vw * 1672 / 941)) / 2
+    + max(2.2vh, 16px)
+    + env(safe-area-inset-top)
+  );
   left: 50%;
   transform: translateX(-50%);
-  width: min(100% - 64px, 560px);
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: clamp(30px, 7.2vw, 52px);
-  font-weight: 300;
-  letter-spacing: 0.06em;
-  line-height: 1.15;
-  text-shadow: 0 2px 18px rgba(20, 16, 10, 0.55);
+  width: min(100% - 48px, 520px);
   pointer-events: none;      /* never blocks a tap on the zones */
   z-index: 3;
+}
+
+.title {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Stacked on top of each other so swapping one for another does not
+     shift the layout; the first is in flow to give .titles its height. */
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+  filter: drop-shadow(0 2px 14px rgba(20, 16, 10, 0.5));
+}
+
+.title--fork { position: relative; }
+.title.is-active { opacity: 1; }
+
+/* The real words, kept for screen readers and search engines but taken
+   out of the visual layer. */
+.title-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ===== CTA ===== */
@@ -226,10 +256,10 @@ body.has-choice .zones { display: none; }
   border-radius: 999px;
   background: #FFFFFF;
   color: #2C2418;
-  font-family: var(--font-display);
-  font-size: 22px;
+  font-family: var(--font-serif);
+  font-size: 20px;
   font-weight: 400;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-decoration: none;
   box-shadow: 0 8px 30px rgba(20, 16, 10, 0.35);
   /* Hidden until a choice is made, and inert while hidden. */
@@ -279,8 +309,17 @@ body.has-choice .scene { animation: none; }
 </head>
 <body>
 
-<!-- Fallback copy for the no-JS case; the script overwrites it from CONFIG. -->
-<h1 class="title">Вика, эти выходные</h1>
+<!-- The headings are hand-lettered artwork, not live text: the calligraphy
+     is the whole point and no webfont renders it. The <h1> carries the
+     real words for search engines, screen readers and the no-JS case,
+     and is visually hidden. -->
+<h1 class="title-text">Вика, эти выходные</h1>
+
+<div class="titles">
+  <img class="title title--fork is-active" src="images/title-fork.webp" alt="" aria-hidden="true">
+  <img class="title title--picnic" src="images/title-picnic.webp" alt="" aria-hidden="true">
+  <img class="title title--horses" src="images/title-horses.webp" alt="" aria-hidden="true">
+</div>
 
 <div class="stage">
   <img class="scene scene--fork is-active" src="images/fork.webp"
@@ -322,12 +361,12 @@ const CONFIG = {
   telegram: "ManyLattice"
 };
 
-const titleEl = document.querySelector(".title");
-titleEl.textContent = CONFIG.title;
-
 // The <title> tag is authored in the markup so the tab is labelled even
 // without JS; re-applying it here keeps CONFIG the single source of truth.
 document.title = CONFIG.title;
+
+const titleText = document.querySelector(".title-text");
+const forkTitle = document.querySelector(".title--fork");
 
 // ============================================================
 // Telegram link
@@ -372,8 +411,13 @@ function choose(choice) {
   forkScene.classList.remove("is-active");
   document.querySelector(`.scene--${choice}`).classList.add("is-active");
 
+  // Swap the lettering artwork, and keep the hidden heading in step so
+  // anything reading the page as text follows the same story.
+  forkTitle.classList.remove("is-active");
+  document.querySelector(`.title--${choice}`).classList.add("is-active");
+  titleText.textContent = CONFIG.chosen[choice];
+
   document.body.classList.add("has-choice");
-  titleEl.textContent = CONFIG.chosen[choice];
 
   ctaEl.textContent = CONFIG.cta;
   ctaEl.href = buildTelegramUrl(CONFIG.telegram, CONFIG.reply[choice]);
