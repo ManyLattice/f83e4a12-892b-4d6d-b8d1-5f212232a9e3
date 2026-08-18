@@ -236,7 +236,8 @@ body.has-choice .half { cursor: default; pointer-events: none; }
 </head>
 <body>
 
-<h1 class="title"></h1>
+<!-- Fallback copy for the no-JS case; the script overwrites it from CONFIG. -->
+<h1 class="title">Вика, эти выходные</h1>
 
 <div class="fork">
   <button class="half" type="button" data-choice="picnic">
@@ -273,6 +274,11 @@ const CONFIG = {
 
 const titleEl = document.querySelector(".title");
 titleEl.textContent = CONFIG.title;
+
+// The <title> tag is authored in the markup so the tab is labelled even
+// without JS; re-applying it here keeps CONFIG the single source of truth
+// if the wording is ever changed in one place only.
+document.title = CONFIG.title;
 
 // ============================================================
 // Telegram link
