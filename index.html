@@ -211,6 +211,27 @@ body.has-choice .half { cursor: default; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) {
   .half__art { animation: none; }
 }
+
+/* ===== Focal points =====
+   Both subjects sit off the geometric centre: the picnic scene lives in
+   the lower two thirds of its frame, and the horse stands left of centre
+   at roughly 45% height. A single object-position cannot serve both the
+   narrow half and the full-screen state, so each is anchored per state. */
+
+/* Fork: tall narrow crop */
+[data-choice="picnic"] .half__art { object-position: 50% 68%; }
+[data-choice="horses"] .half__art { object-position: 42% 52%; }
+
+/* Opened: wide crop - pull back toward the middle so the subject
+   does not ride the top edge once the frame becomes short and wide. */
+[data-choice="picnic"].is-chosen .half__art { object-position: 50% 60%; }
+[data-choice="horses"].is-chosen .half__art { object-position: 45% 48%; }
+
+.half__art { transition: object-position var(--dur) var(--ease); }
+
+@media (prefers-reduced-motion: reduce) {
+  .half__art { transition-duration: 1ms; }
+}
 </style>
 </head>
 <body>
