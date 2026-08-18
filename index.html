@@ -79,20 +79,14 @@ body {
 /* The artwork was reframed so the blanket and the horses sit inside the
    9% that a tall phone crops from each side; the fork can fill the
    screen like the other scenes. */
-/* The blanket sits at 5.1% of the artwork's width and the horses reach
-   99.9% - 94.8% of the frame, while a phone's `cover` window shows only
-   82% of it. The subjects are simply wider than any crop, so the fork is
-   shown whole. The bands above and below continue its own sky and earth,
-   so the page still reads as one picture. */
-.scene--fork {
-  object-fit: contain;
-  background: linear-gradient(
-    to bottom,
-    #AA946E 0%,
-    #C9A870 18%,
-    #C9A870 82%,
-    #774C1E 100%
-  );
+.scene--fork { object-position: 50% 50%; }
+
+/* A wide screen crops this tall artwork top and bottom instead of at the
+   sides, and the couple stands low in the frame - centred, they fall off
+   the bottom edge along with the fork itself. Anchoring low keeps the
+   subject; the sky is what gets sacrificed, and there is plenty of it. */
+@media (orientation: landscape) {
+  .scene--fork { object-position: 50% 82%; }
 }
 
 .scene--picnic { object-position: 50% 64%; }
@@ -119,18 +113,6 @@ body {
   inset: 0;
   display: flex;
   z-index: 2;
-}
-
-/* The fork is letterboxed, so the zones are clamped to the artwork's own
-   box - a tap on the empty bands must not pick a road. Both terms come
-   from the 941x1672 ratio. */
-.zones {
-  width: min(100%, calc(100dvh * 941 / 1672));
-  height: min(100%, calc(100vw * 1672 / 941));
-  inset: auto;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
 }
 
 .zone {
@@ -204,13 +186,7 @@ body.has-choice .zones { display: none; }
    of the <h1> text, so they are hidden from assistive tech. */
 .titles {
   position: fixed;
-  /* Sits inside the top edge of the painted artwork, not of the viewport,
-     so it never lands in the band above the sky. */
-  top: calc(
-    (100dvh - min(100dvh, 100vw * 1672 / 941)) / 2
-    + max(2.4vh, 14px)
-    + env(safe-area-inset-top)
-  );
+  top: calc(4.5vh + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   width: min(100% - 48px, 520px);
