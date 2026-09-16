@@ -19,7 +19,7 @@
 <!-- In-app browsers (Telegram, Instagram) paint their chrome over the page
      and tint it with this colour. Sampled from the artwork's own night sky
      so the chrome blends into the scene. -->
-<meta name="theme-color" content="#1D0A02">
+<meta name="theme-color" content="#150C07">
 
 <style>
 /* ===== Variables ===== */
@@ -50,14 +50,16 @@ body {
      them to match what the photograph is doing right there - then the
      strips read as the room continuing into shadow, rather than as a
      frame around a picture. */
-  background-color: var(--night);
-  background-image: linear-gradient(
-    to bottom,
-    #2A190C 0%,
-    #1A100D 22%,
-    #1A100D 78%,
-    #1D0A02 100%
-  );
+  /* Dark enough to disappear against the picture's own edges, which is
+     what the margins beside a `contain`-fitted image have to do. Sampled
+     from the artwork and then taken down: a backdrop lighter than the
+     photograph turns the margins into a visible frame. */
+  background-color: #150C07;
+  background-image:
+    radial-gradient(120% 60% at 50% 46%,
+      rgba(74, 40, 20, 0.55) 0%,
+      rgba(31, 17, 10, 0.35) 45%,
+      rgba(10, 6, 4, 0.2) 100%);
   color: var(--ink);
   font-family: var(--font-serif);
   -webkit-font-smoothing: antialiased;
@@ -197,10 +199,16 @@ body.is-solved .tile {
   inset: 0;
   width: 100%;
   height: 100%;
-  /* The artwork is 1:2.56, taller than the screen, so cover trims a
-     little from each side. The lettering and the table both sit well
-     inside the frame, so that trim costs nothing. */
-  object-fit: cover;
+  /* `contain`, not `cover`. Measured on the device: Safari with its
+     address bar showing leaves a 402x714 viewport, and against that the
+     artwork's 1:2.56 is so much taller that `cover` painted it 1029px
+     high and threw away 315 of them - 31%, enough to push the top of the
+     lettering off the screen entirely. Nothing about the file's
+     proportions can fix that; only showing all of it can. The width it
+     leaves over is filled by the body gradient, whose ends are sampled
+     from this image's own top and bottom edges, so the picture reads as
+     sitting in the room rather than in a box. */
+  object-fit: contain;
   opacity: 0;
   z-index: 5;
   pointer-events: none;
@@ -713,9 +721,10 @@ function solve() {
   // mirror the `object-fit: cover` on .final - the two are cross-faded
   // over each other, so a mismatch here would make the scene jump at the
   // swap.
-  // Matched to the box the final picture occupies, which is the viewport
-  // itself - iOS Safari hands a page nothing beyond it.
-  const scale = Math.max(
+  // Matched to the box the final picture occupies. `min`, mirroring the
+  // `object-fit: contain` on .final - the two cross-fade over each other,
+  // so a mismatch would make the scene jump at the swap.
+  const scale = Math.min(
     window.innerWidth / board.w,
     window.innerHeight / board.h
   );
