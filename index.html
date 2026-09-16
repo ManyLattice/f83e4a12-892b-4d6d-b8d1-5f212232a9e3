@@ -175,7 +175,15 @@ body.is-solved .tile {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* `contain`, not `cover`. The artwork is far taller than any phone
+     screen (1:2.56 against roughly 1:2), so `cover` matches the width and
+     throws away the overflow - about 15% of the height on a bare screen,
+     and 24% in Safari with its chrome showing. That crop takes the top of
+     the lettering and the foot of the table. The words are the message;
+     they cannot be cropped. Letterboxing against the page background is
+     the smaller price, and the background is sampled from this very
+     image, so the seam barely reads. */
+  object-fit: contain;
   opacity: 0;
   z-index: 5;
   pointer-events: none;
@@ -680,10 +688,11 @@ function solve() {
   solved = true;
   window.clearTimeout(idleTimer);
 
-  // How much the board has to grow to cover the screen. `cover`, not
-  // `contain`: the finished picture fills the phone the way the final
-  // image does, with no letterboxing between the two as they cross-fade.
-  const scale = Math.max(
+  // How much the board has to grow to match the final picture. `min`, to
+  // mirror the `object-fit: contain` on .final - the two are cross-faded
+  // over each other, so if the puzzle grew to cover while the picture
+  // only contains, the scene would jump at the swap.
+  const scale = Math.min(
     window.innerWidth / board.w,
     window.innerHeight / board.h
   );
