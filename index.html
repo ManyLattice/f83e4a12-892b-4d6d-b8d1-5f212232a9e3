@@ -175,15 +175,12 @@ body.is-solved .tile {
   inset: 0;
   width: 100%;
   height: 100%;
-  /* `contain`, not `cover`. The artwork is far taller than any phone
-     screen (1:2.56 against roughly 1:2), so `cover` matches the width and
-     throws away the overflow - about 15% of the height on a bare screen,
-     and 24% in Safari with its chrome showing. That crop takes the top of
-     the lettering and the foot of the table. The words are the message;
-     they cannot be cropped. Letterboxing against the page background is
-     the smaller price, and the background is sampled from this very
-     image, so the seam barely reads. */
-  object-fit: contain;
+  /* The artwork was widened to 1:2.17 - the shape of the phone - by
+     extending its own dark, blurred edges outward, so `cover` now fills
+     the screen while cropping almost nothing. The lettering sits well
+     inside the original frame, so the little that a taller or shorter
+     viewport does trim never reaches the words. */
+  object-fit: cover;
   opacity: 0;
   z-index: 5;
   pointer-events: none;
@@ -369,7 +366,7 @@ const CONFIG = {
 
   // The aspect ratio the images were generated at (width / height).
   // Measured from the generated artwork itself, not from a target device.
-  aspect: 784 / 2006,
+  aspect: 923 / 2006,
 
   prompt: "собери",
   cta: "Я согласна",
@@ -688,11 +685,11 @@ function solve() {
   solved = true;
   window.clearTimeout(idleTimer);
 
-  // How much the board has to grow to match the final picture. `min`, to
-  // mirror the `object-fit: contain` on .final - the two are cross-faded
-  // over each other, so if the puzzle grew to cover while the picture
-  // only contains, the scene would jump at the swap.
-  const scale = Math.min(
+  // How much the board has to grow to match the final picture. `max`, to
+  // mirror the `object-fit: cover` on .final - the two are cross-faded
+  // over each other, so a mismatch here would make the scene jump at the
+  // swap.
+  const scale = Math.max(
     window.innerWidth / board.w,
     window.innerHeight / board.h
   );
