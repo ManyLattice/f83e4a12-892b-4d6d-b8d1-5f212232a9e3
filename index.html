@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ru" class="no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Вика</title>
+
+<!-- Open Graph: preview when the link is shared in Telegram.
+     Absolute URL is required - Telegram ignores relative paths.
+     The repo serves one branch at a time through Pages, so the path carries
+     the repository name, not the branch.
+     Deliberately points at the PLAIN scene, not the lettered one: the
+     preview should not give away the invitation before she opens it. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Вика">
+<meta property="og:description" content="Собери">
+<meta property="og:image" content="https://manylattice.github.io/f83e4a12-892b-4d6d-b8d1-5f212232a9e3/images/scene.webp">
+
+<!-- In-app browsers (Telegram, Instagram) paint their chrome over the page
+     and tint it with this colour. Sampled from the artwork's own night sky
+     so the chrome blends into the scene. -->
+<meta name="theme-color" content="#1A100D">
+
+<style>
+/* ===== Variables ===== */
+:root {
+  --dur: 650ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ink: #FFF6EA;
+  --font-serif: Georgia, "Times New Roman", "Iowan Old Style", serif;
+
+  /* The room behind the puzzle. Sampled from the artwork's own night sky. */
+  --night: #1A100D;
+
+  /* Set from JS once the board has been measured: the board's own size,
+     so a tile can be positioned and sized against it in CSS alone. */
+  --board-w: 0px;
+  --board-h: 0px;
+}
+
+/* ===== Base ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  background-color: var(--night);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;              /* single screen, never scrolls */
+  /* A dragged tile must not also pan the page or trigger the browser's
+     own gestures. Set here as well as on the tiles because iOS applies
+     some gestures at the document level. */
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+/* ===== Stage ===== */
+.stage {
+  position: relative;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+/* A faint warmth behind the board, so the loose pieces read as lying on
+   a table in a lit room rather than floating in a void. */
+.stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(70% 45% at 50% 52%,
+    rgba(186, 116, 54, 0.26) 0%,
+    rgba(90, 44, 24, 0.14) 45%,
+    transparent 78%);
+  pointer-events: none;
+}
+
+/* ===== Board =====
+   The play area. Sized in JS to the image's aspect ratio with room left
+   around it for the scattered pieces to start from. */
+.board {
+  position: relative;
+  width: var(--board-w);
+  height: var(--board-h);
+  z-index: 2;
+}
+
+/* The empty frame the pieces are going back into. Just enough of an
+   outline to say "the picture belongs here". */
+.board::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 246, 234, 0.13);
+  border-radius: 3px;
+  transition: opacity var(--dur) var(--ease);
+}
+
+/* Once solved, the frame is no longer scaffolding - it would only cut a
+   line across the finished picture. */
+body.is-solved .board::before { opacity: 0; }
+
+/* ===== Tiles =====
+   Four <div>s sharing one background image, each showing its own quarter
+   through background-position. No need to slice the file into four.
+   Position/size come from CSS variables set per tile in JS. */
+.tile {
+  position: absolute;
+  width: calc(var(--board-w) / 2);
+  height: calc(var(--board-h) / 2);
+
+  /* --hx/--hy: where this piece belongs, in halves (0 or 1).
+     --dx/--dy: how far it currently sits from there, in pixels. */
+  left: calc(var(--hx) * var(--board-w) / 2);
+  top:  calc(var(--hy) * var(--board-h) / 2);
+
+  background-image: var(--scene);
+  background-size: var(--board-w) var(--board-h);
+  background-position: calc(var(--hx) * -1 * var(--board-w) / 2)
+                       calc(var(--hy) * -1 * var(--board-h) / 2);
+
+  transform: translate3d(var(--dx), var(--dy), 0) rotate(var(--rot, 0deg));
+
+  touch-action: none;            /* the finger drags the tile, not the page */
+  -webkit-tap-highlight-color: transparent;
+  cursor: grab;
+  will-change: transform;
+
+  /* A loose piece has an edge and a shadow; a placed one loses both. */
+  box-shadow: 0 10px 26px rgba(6, 4, 10, 0.55);
+  outline: 1px solid rgba(255, 246, 234, 0.10);
+  outline-offset: -1px;
+}
+
+/* Returning to where it was picked up, or snapping home. Only ever
+   enabled between gestures - never while a finger is down, or the tile
+   would lag behind it. */
+.tile.is-animating {
+  transition: transform 420ms var(--ease);
+}
+
+.tile.is-dragging {
+  cursor: grabbing;
+  z-index: 10;
+  transition: none;
+  box-shadow: 0 18px 40px rgba(6, 4, 10, 0.7);
+}
+
+.tile.is-placed {
+  cursor: default;
+  z-index: 1;
+}
+
+/* The seams dissolve only when the last piece lands, so the picture
+   becomes one thing at the moment it is finished. */
+body.is-solved .tile {
+  box-shadow: none;
+  outline-color: transparent;
+  transition: box-shadow 700ms var(--ease), outline-color 700ms var(--ease);
+}
+
+/* ===== Final picture =====
+   The lettered version of the scene. The board is deliberately small -
+   it has to leave room around itself for the scattered pieces - but the
+   finished picture is the payoff and belongs on the whole screen. So it
+   is fixed to the viewport rather than to the board, and the solved
+   puzzle grows into the same frame underneath it (see .board below), so
+   the two are the same size at the moment they cross-fade. */
+.final {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  z-index: 5;
+  pointer-events: none;
+  transition: opacity 900ms var(--ease);
+}
+
+body.is-solved .final { opacity: 1; }
+
+/* The completed puzzle expands from its play size to fill the screen,
+   so the picture she assembled becomes the picture she is given. The
+   scale is computed in JS, where the board and viewport are measured. */
+body.is-solved .board {
+  transform: scale(var(--solve-scale, 1));
+  transition: transform 800ms var(--ease);
+}
+
+/* ===== Prompt ===== */
+.prompt {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(7vh + env(safe-area-inset-bottom));
+  z-index: 6;
+  font-size: 17px;
+  letter-spacing: 0.16em;
+  text-transform: lowercase;
+  color: rgba(255, 246, 234, 0.55);
+  text-shadow: 0 2px 14px rgba(8, 6, 12, 0.8);
+  pointer-events: none;
+  transition: opacity 500ms var(--ease);
+  animation: breathe 3.6s ease-in-out infinite;
+}
+
+/* The hint is for the first piece only. Once she has moved one, she
+   knows how it works and the line would just sit there nagging. */
+body.is-engaged .prompt { opacity: 0; animation: none; }
+
+/* Once solved the hint is not merely quiet but gone: it sits at the
+   bottom of the screen, which is exactly where the button arrives. */
+body.is-solved .prompt { opacity: 0; animation: none; visibility: hidden; }
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.85; }
+}
+
+/* ===== CTA ===== */
+.cta {
+  position: fixed;
+  left: 50%;
+  bottom: calc(8vh + env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(14px);
+  z-index: 7;
+  display: inline-block;
+  padding: 17px 46px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #2A1A16;
+  font-family: var(--font-serif);
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 10px 34px rgba(12, 8, 14, 0.5);
+  -webkit-tap-highlight-color: transparent;
+
+  /* Inert until the picture is whole. */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 700ms var(--ease),
+              transform 700ms var(--ease),
+              visibility 700ms;
+}
+
+body.is-solved .cta {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+  /* After the picture has settled, so the two do not compete. */
+  transition-delay: 900ms;
+}
+
+@media (hover: hover) {
+  .cta:hover { box-shadow: 0 14px 44px rgba(232, 169, 79, 0.45); }
+}
+
+.cta:active { background: #F2E4D2; }
+
+/* ===== Escape hatch =====
+   An invitation must not be gated behind a puzzle she cannot work. If
+   nothing has been solved for a while, offer the way through. Small and
+   low-contrast: available, not advertised. */
+.skip {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(2.6vh + env(safe-area-inset-bottom));
+  z-index: 6;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: rgba(255, 246, 234, 0.34);
+  background: none;
+  border: 0;
+  font-family: var(--font-serif);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 600ms var(--ease), visibility 600ms;
+}
+
+.skip.is-offered { opacity: 1; visibility: visible; }
+body.is-solved .skip { opacity: 0; visibility: hidden; }
+
+/* ===== Reduced motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  .prompt { animation: none; opacity: 0.7; }
+  .tile.is-animating { transition-duration: 1ms; }
+  .final, .cta { transition-duration: 1ms; }
+  body.is-solved .cta { transition-delay: 0ms; }
+}
+
+/* ===== No JS =====
+   Without the script there is no puzzle to solve, so the page skips
+   straight to the finished picture and a working button. A degraded
+   page, never a blank one. */
+.no-js .board::before,
+.no-js .tile,
+.no-js .prompt,
+.no-js .skip { display: none; }
+
+.no-js .final { opacity: 1; }
+
+.no-js .cta {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%);
+}
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="board" id="board">
+    <!-- Tiles are built in JS: their number, size and starting scatter all
+         depend on the measured board, and duplicating that in markup would
+         mean two sources of truth. -->
+
+    <!-- The lettered scene. Falls back to the plain one if the generated
+         text turns out badly - see CONFIG.finalSrc. -->
+    <img class="final" id="final" src="images/scene-text.webp" alt="" aria-hidden="true">
+  </div>
+</div>
+
+<p class="prompt" id="prompt">собери</p>
+
+<button class="skip" id="skip" type="button">показать целиком</button>
+
+<!-- The href is authored here as well as set from CONFIG, so the button is
+     a working link even if the script never runs. -->
+<a class="cta" id="cta" href="https://t.me/ManyLattice" target="_blank" rel="noopener">Я согласна</a>
+
+<script>
+// The engine is taking over: drop the no-JS safety class.
+// If this line never runs, CSS shows the finished picture and the button.
+document.documentElement.classList.remove("no-js");
+
+// ============================================================
+// CONFIG - the only place to edit when the wording changes
+// ============================================================
+const CONFIG = {
+  title: "Вика",
+
+  // The puzzle is cut from the PLAIN scene; the lettered one is the reward.
+  // If the generated lettering comes out badly, point finalSrc at
+  // "images/scene.webp" and the words can be laid over it as live text
+  // instead - the puzzle itself does not change either way.
+  sceneSrc: "images/scene.webp",
+  finalSrc: "images/scene-text.webp",
+
+  // The aspect ratio the images were generated at (width / height).
+  // Measured from the generated artwork itself, not from a target device.
+  aspect: 784 / 2006,
+
+  prompt: "собери",
+  cta: "Я согласна",
+  reply: "Согласна 💃🥂",
+  telegram: "ManyLattice",
+
+  // How close a piece has to land to snap home, as a fraction of the
+  // shorter side of a tile. Small enough that placing a piece is a real
+  // act, large enough to forgive a finger on a phone.
+  snapTolerance: 0.34,
+
+  // A floor for that radius, so the catch zone never becomes smaller than
+  // a fingertip on a narrow screen.
+  snapMinPx: 34,
+
+  // Silence after which the way through is offered, in milliseconds.
+  skipAfter: 40000
+};
+
+document.title = CONFIG.title;
+
+// ============================================================
+// Telegram link
+// ============================================================
+
+/**
+ * Builds a t.me link that opens a private chat with the text pre-filled
+ * in the input field. The text is NOT sent automatically - pressing send
+ * stays her decision.
+ */
+function buildTelegramUrl(username, text) {
+  // Telegram usernames are shown as "@name" everywhere, so a leading "@"
+  // is the likeliest thing to end up in CONFIG.telegram. Strip it -
+  // t.me links must not contain it.
+  const cleanUsername = username.trim().replace(/^@/, "");
+  const base = `https://t.me/${cleanUsername}`;
+  return text ? `${base}?text=${encodeURIComponent(text)}` : base;
+}
+
+const boardEl  = document.getElementById("board");
+const finalEl  = document.getElementById("final");
+const promptEl = document.getElementById("prompt");
+const skipEl   = document.getElementById("skip");
+const ctaEl    = document.getElementById("cta");
+
+promptEl.textContent = CONFIG.prompt;
+ctaEl.textContent = CONFIG.cta;
+ctaEl.href = buildTelegramUrl(CONFIG.telegram, CONFIG.reply);
+finalEl.src = CONFIG.finalSrc;
+
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ============================================================
+// Board geometry
+// ============================================================
+
+/**
+ * Sizes the board to the image's aspect ratio, leaving margin around it
+ * for the scattered pieces to start from and for the prompt to sit under.
+ * Returns the board's pixel size.
+ */
+function measureBoard() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // The loose pieces start outside the frame, so the board cannot fill
+  // the screen or they would begin off-screen.
+  const maxW = vw * 0.66;
+  const maxH = vh * 0.62;
+
+  let w = maxW;
+  let h = w / CONFIG.aspect;
+  if (h > maxH) { h = maxH; w = h * CONFIG.aspect; }
+
+  document.documentElement.style.setProperty("--board-w", `${Math.round(w)}px`);
+  document.documentElement.style.setProperty("--board-h", `${Math.round(h)}px`);
+  return { w: Math.round(w), h: Math.round(h) };
+}
+
+let board = measureBoard();
+
+// Where the board sits on screen. The stage centres it, so this is derived
+// rather than chosen - and it has to be re-read after every resize, since
+// the scatter is measured against the screen edges from here.
+let boardOrigin = { x: 0, y: 0 };
+
+function measureOrigin() {
+  const rect = boardEl.getBoundingClientRect();
+  boardOrigin = { x: rect.left, y: rect.top };
+}
+
+// ============================================================
+// Tiles
+// ============================================================
+
+// Which way each piece is thrown, and how far along that direction as a
+// fraction of the room actually available between the board and the edge
+// of the screen. Measuring against the gap rather than against the board
+// is what keeps every piece reachable: the board is tall and narrow, so a
+// sideways offset stated in board-widths lands well off a phone screen.
+// Chosen rather than randomised - a random scatter sometimes buries one
+// piece under another.
+const SCATTER = [
+  { hx: 0, hy: 0, sx: -1, sy: -1, fx: 0.72, fy: 0.55, rot: -9 },
+  { hx: 1, hy: 0, sx:  1, sy: -1, fx: 0.74, fy: 0.30, rot:  7 },
+  { hx: 0, hy: 1, sx: -1, sy:  1, fx: 0.70, fy: 0.42, rot:  6 },
+  { hx: 1, hy: 1, sx:  1, sy:  1, fx: 0.73, fy: 0.60, rot: -8 }
+];
+
+// Breathing room kept between a scattered piece and the screen edge, so
+// nothing sits flush against it and every piece is comfortably grabbable.
+const EDGE_MARGIN = 22;
+
+const tiles = SCATTER.map((spec) => {
+  const el = document.createElement("div");
+  el.className = "tile";
+  el.style.setProperty("--scene", `url("${CONFIG.sceneSrc}")`);
+  el.style.setProperty("--hx", spec.hx);
+  el.style.setProperty("--hy", spec.hy);
+  el.style.setProperty("--rot", `${spec.rot}deg`);
+
+  const tile = { el, spec, dx: 0, dy: 0, placed: false };
+  boardEl.appendChild(el);
+  return tile;
+});
+
+// Scattering needs the board's position on screen, which only exists once
+// the tiles are in the document and the stage has centred it.
+measureOrigin();
+tiles.forEach(applyScatter);
+
+/**
+ * Puts a piece back at its scattered starting offset.
+ *
+ * The offset is taken as a fraction of the gap between the tile's home
+ * position and the edge of the screen in that direction, then clamped so
+ * the whole piece stays on screen. A piece she cannot reach is a puzzle
+ * she cannot finish, so this is a correctness constraint, not polish.
+ */
+function applyScatter(tile) {
+  const { sx, sy, fx, fy, hx, hy } = tile.spec;
+
+  const tileW = board.w / 2;
+  const tileH = board.h / 2;
+
+  // The tile's home rectangle, in viewport coordinates.
+  const homeLeft = boardOrigin.x + hx * tileW;
+  const homeTop  = boardOrigin.y + hy * tileH;
+
+  // How far it could travel each way before leaving the screen.
+  const roomLeft  = Math.max(0, homeLeft - EDGE_MARGIN);
+  const roomRight = Math.max(0, window.innerWidth - (homeLeft + tileW) - EDGE_MARGIN);
+  const roomUp    = Math.max(0, homeTop - EDGE_MARGIN);
+  const roomDown  = Math.max(0, window.innerHeight - (homeTop + tileH) - EDGE_MARGIN);
+
+  tile.dx = sx * fx * (sx < 0 ? roomLeft : roomRight);
+  tile.dy = sy * fy * (sy < 0 ? roomUp   : roomDown);
+
+  writeTransform(tile);
+}
+
+/**
+ * How near home a piece has to be dropped to snap into place. Derived
+ * from the shorter side of a tile so it scales with the board, with a
+ * floor so it stays reachable by a finger on a small screen.
+ */
+function snapRadius() {
+  const shortSide = Math.min(board.w / 2, board.h / 2);
+  return Math.max(CONFIG.snapMinPx, shortSide * CONFIG.snapTolerance);
+}
+
+/** Pushes a piece's current offset into CSS. */
+function writeTransform(tile) {
+  tile.el.style.setProperty("--dx", `${tile.dx}px`);
+  tile.el.style.setProperty("--dy", `${tile.dy}px`);
+}
+
+// A resize (rotation, or the browser chrome collapsing on scroll) changes
+// the board, and with it every offset. Placed pieces stay home; loose ones
+// are re-scattered, which is the only correct answer - their old pixel
+// offsets mean nothing against a new board.
+window.addEventListener("resize", () => {
+  if (solved) return;
+  board = measureBoard();
+  measureOrigin();
+  tiles.forEach((tile) => {
+    if (tile.placed) { tile.dx = 0; tile.dy = 0; writeTransform(tile); }
+    else applyScatter(tile);
+  });
+});
+
+// ============================================================
+// Dragging
+// ============================================================
+let engaged = false;
+let solved = false;
+let idleTimer = null;
+
+/**
+ * Wires one piece for dragging. Pointer Events cover mouse, touch and
+ * pencil in one path, and setPointerCapture keeps the gesture attached to
+ * this element even when the finger outruns it.
+ */
+function makeDraggable(tile) {
+  const el = tile.el;
+  let startX = 0, startY = 0, originX = 0, originY = 0, dragging = false;
+
+  el.addEventListener("pointerdown", (event) => {
+    if (tile.placed || solved) return;
+
+    dragging = true;
+    startX = event.clientX;
+    startY = event.clientY;
+    originX = tile.dx;
+    originY = tile.dy;
+
+    el.setPointerCapture(event.pointerId);
+    el.classList.remove("is-animating");
+    el.classList.add("is-dragging");
+
+    noteEngagement();
+    event.preventDefault();
+  });
+
+  el.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    tile.dx = originX + (event.clientX - startX);
+    tile.dy = originY + (event.clientY - startY);
+    writeTransform(tile);
+  });
+
+  function endDrag(event) {
+    if (!dragging) return;
+    dragging = false;
+    el.classList.remove("is-dragging");
+    el.classList.add("is-animating");
+
+    // Home is dx/dy = 0. Snap if the piece landed close enough, otherwise
+    // let it fall back to where it was picked up: a miss costs nothing.
+    // A round catch zone, measured in pixels rather than in fractions of
+    // a tile. The board is tall and narrow, so a fractional tolerance is
+    // far looser vertically than horizontally - loose enough that a piece
+    // nudged a few pixels snaps home and the puzzle solves itself.
+    const distance = Math.hypot(tile.dx, tile.dy);
+
+    if (distance < snapRadius()) place(tile);
+    else { tile.dx = originX; tile.dy = originY; writeTransform(tile); }
+
+    if (el.hasPointerCapture(event.pointerId)) el.releasePointerCapture(event.pointerId);
+  }
+
+  el.addEventListener("pointerup", endDrag);
+  el.addEventListener("pointercancel", endDrag);
+}
+
+/** Seats a piece in its place for good. */
+function place(tile) {
+  tile.placed = true;
+  tile.dx = 0;
+  tile.dy = 0;
+  tile.el.style.setProperty("--rot", "0deg");
+  tile.el.classList.add("is-placed");
+  writeTransform(tile);
+
+  if (tiles.every((t) => t.placed)) solve();
+}
+
+tiles.forEach(makeDraggable);
+
+// ============================================================
+// Engagement and the way through
+// ============================================================
+
+/** She has touched a piece: retire the hint and restart the idle clock. */
+function noteEngagement() {
+  if (!engaged) {
+    engaged = true;
+    document.body.classList.add("is-engaged");
+  }
+  armIdleTimer();
+}
+
+/**
+ * Offers the way past the puzzle after a stretch of no progress. The
+ * clock restarts on every gesture, so it only fires when she is genuinely
+ * stuck - or never touched it at all.
+ */
+function armIdleTimer() {
+  window.clearTimeout(idleTimer);
+  if (solved) return;
+  idleTimer = window.setTimeout(
+    () => skipEl.classList.add("is-offered"),
+    CONFIG.skipAfter
+  );
+}
+
+armIdleTimer();
+
+skipEl.addEventListener("click", () => {
+  tiles.forEach((tile) => {
+    tile.el.classList.add("is-animating");
+    place(tile);
+  });
+});
+
+// ============================================================
+// Solved
+// ============================================================
+
+/**
+ * The picture is whole. The seams dissolve, the lettered version fades in
+ * over it, and the button follows once that has settled.
+ */
+function solve() {
+  if (solved) return;
+  solved = true;
+  window.clearTimeout(idleTimer);
+
+  // How much the board has to grow to cover the screen. `cover`, not
+  // `contain`: the finished picture fills the phone the way the final
+  // image does, with no letterboxing between the two as they cross-fade.
+  const scale = Math.max(
+    window.innerWidth / board.w,
+    window.innerHeight / board.h
+  );
+  document.documentElement.style.setProperty("--solve-scale", scale);
+
+  // A beat between the last piece landing and the picture transforming,
+  // so she sees what she completed before it changes.
+  const delay = reduceMotion ? 0 : 420;
+  window.setTimeout(() => document.body.classList.add("is-solved"), delay);
+}
+
+// ============================================================
+// Preload
+// ============================================================
+// The reward must not arrive as a half-loaded image at the one moment the
+// page is supposed to feel like an answer.
+[CONFIG.sceneSrc, CONFIG.finalSrc].forEach((src) => {
+  const img = new Image();
+  img.src = src;
+});
+</script>
+
+</body>
+</html>
