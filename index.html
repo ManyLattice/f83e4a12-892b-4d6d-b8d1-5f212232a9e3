@@ -19,7 +19,7 @@
 <!-- In-app browsers (Telegram, Instagram) paint their chrome over the page
      and tint it with this colour. Sampled from the artwork's own night sky
      so the chrome blends into the scene. -->
-<meta name="theme-color" content="#250D02">
+<meta name="theme-color" content="#150C07">
 
 <style>
 /* ===== Variables ===== */
@@ -50,20 +50,16 @@ body {
      them to match what the photograph is doing right there - then the
      strips read as the room continuing into shadow, rather than as a
      frame around a picture. */
-  /* iOS Safari keeps two strips for its own chrome - the status bar and
-     the toolbar - and no page can paint them; verified on the device
-     (100lvh equals innerHeight, env(safe-area-inset-*) reports 0, and an
-     element overshooting the viewport still paints nothing there). What
-     a page can do is make them stop reading as a border, by matching the
-     colour the photograph is showing right at its own top and bottom
-     edges, sampled from the file. */
-  background-color: #0B0F1A;
-  background-image: linear-gradient(
-    to bottom,
-    #0B0F1A 0%,
-    #0B0F1A 40%,
-    #250D02 100%
-  );
+  /* Dark enough to disappear against the picture's own edges, which is
+     what the margins beside a `contain`-fitted image have to do. Sampled
+     from the artwork and then taken down: a backdrop lighter than the
+     photograph turns the margins into a visible frame. */
+  background-color: #150C07;
+  background-image:
+    radial-gradient(120% 60% at 50% 46%,
+      rgba(74, 40, 20, 0.55) 0%,
+      rgba(31, 17, 10, 0.35) 45%,
+      rgba(10, 6, 4, 0.2) 100%);
   color: var(--ink);
   font-family: var(--font-serif);
   -webkit-font-smoothing: antialiased;
