@@ -199,16 +199,13 @@ body.is-solved .tile {
   inset: 0;
   width: 100%;
   height: 100%;
-  /* `contain`, not `cover`. Measured on the device: Safari with its
-     address bar showing leaves a 402x714 viewport, and against that the
-     artwork's 1:2.56 is so much taller that `cover` painted it 1029px
-     high and threw away 315 of them - 31%, enough to push the top of the
-     lettering off the screen entirely. Nothing about the file's
-     proportions can fix that; only showing all of it can. The width it
-     leaves over is filled by the body gradient, whose ends are sampled
-     from this image's own top and bottom edges, so the picture reads as
-     sitting in the room rather than in a box. */
-  object-fit: contain;
+  /* The artwork is 1:1.78, cut to the shape of the viewport Safari
+     actually leaves on her phone - 402x714 with the address bar showing,
+     measured on the device, not the 402x874 of the bare screen. At that
+     shape `cover` fills the screen edge to edge and trims only a sliver,
+     and the lettering sits well inside the frame, so the sliver never
+     reaches it. */
+  object-fit: cover;
   opacity: 0;
   z-index: 5;
   pointer-events: none;
@@ -397,7 +394,7 @@ const CONFIG = {
 
   // The aspect ratio the images were generated at (width / height).
   // Measured from the generated artwork itself, not from a target device.
-  aspect: 784 / 2006,
+  aspect: 941 / 1672,
 
   prompt: "собери",
   cta: "Я согласна",
@@ -721,10 +718,10 @@ function solve() {
   // mirror the `object-fit: cover` on .final - the two are cross-faded
   // over each other, so a mismatch here would make the scene jump at the
   // swap.
-  // Matched to the box the final picture occupies. `min`, mirroring the
-  // `object-fit: contain` on .final - the two cross-fade over each other,
+  // Matched to the box the final picture occupies. `max`, mirroring the
+  // `object-fit: cover` on .final - the two cross-fade over each other,
   // so a mismatch would make the scene jump at the swap.
-  const scale = Math.min(
+  const scale = Math.max(
     window.innerWidth / board.w,
     window.innerHeight / board.h
   );
