@@ -19,7 +19,7 @@
 <!-- In-app browsers (Telegram, Instagram) paint their chrome over the page
      and tint it with this colour. Sampled from the artwork's own night sky
      so the chrome blends into the scene. -->
-<meta name="theme-color" content="#1A100D">
+<meta name="theme-color" content="#1D0A02">
 
 <style>
 /* ===== Variables ===== */
@@ -44,7 +44,20 @@
 html, body { height: 100%; }
 
 body {
+  /* Sampled from the top and bottom edges of the artwork itself. The two
+     strips iOS Safari keeps for its own chrome cannot be painted by the
+     page, so the next best thing is for the colour immediately behind
+     them to match what the photograph is doing right there - then the
+     strips read as the room continuing into shadow, rather than as a
+     frame around a picture. */
   background-color: var(--night);
+  background-image: linear-gradient(
+    to bottom,
+    #2A190C 0%,
+    #1A100D 22%,
+    #1A100D 78%,
+    #1D0A02 100%
+  );
   color: var(--ink);
   font-family: var(--font-serif);
   -webkit-font-smoothing: antialiased;
@@ -172,17 +185,18 @@ body.is-solved .tile {
    the two are the same size at the moment they cross-fade. */
 .final {
   position: fixed;
-  /* Anchored to the top and stretched to the LARGEST viewport, not the
-     current one. In Safari `inset: 0` only ever covers the area left
-     between the status bar and the address bar, so the picture stopped
-     short of both. 100lvh is the height the page would have if that
-     chrome were collapsed, so the scene runs the full height of the
-     screen and the browser's own bars sit on top of it - which is what
-     viewport-fit=cover in the <meta> was always for. */
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100lvh;
+  /* The picture fills every pixel iOS Safari will give a page. It will
+     not give all of them: the status bar at the top and the toolbar at
+     the bottom are the browser's own, and nothing a page does reaches
+     them - not 100lvh, not a negative offset past the viewport, not
+     env(safe-area-inset-*), which Safari reports as 0 here because it
+     has already taken those strips out of the viewport. Measured on the
+     device rather than assumed. What is left is to make the two strips
+     stop reading as a frame, which is the page background's job - see
+     the gradient on body. */
+  inset: 0;
+  width: 100%;
+  height: 100%;
   /* The artwork is 1:2.56, taller than the screen, so cover trims a
      little from each side. The lettering and the table both sit well
      inside the frame, so that trim costs nothing. */
@@ -538,21 +552,6 @@ function applyScatter(tile) {
 }
 
 /**
- * The height of the largest viewport - what the page would measure with
- * the browser's chrome collapsed. Read from CSS rather than guessed, so
- * it agrees exactly with the `100lvh` on the final picture. Falls back to
- * the current viewport where lvh is unsupported.
- */
-function largeViewportHeight() {
-  const probe = document.createElement("div");
-  probe.style.cssText = "position:fixed;top:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none";
-  document.body.appendChild(probe);
-  const height = probe.getBoundingClientRect().height;
-  probe.remove();
-  return height || window.innerHeight;
-}
-
-/**
  * How near home a piece has to be dropped to snap into place. Derived
  * from the shorter side of a tile so it scales with the board, with a
  * floor so it stays reachable by a finger on a small screen.
@@ -714,12 +713,11 @@ function solve() {
   // mirror the `object-fit: cover` on .final - the two are cross-faded
   // over each other, so a mismatch here would make the scene jump at the
   // swap.
-  // Measured against the same box the final picture uses - the largest
-  // viewport, not the current one - or the puzzle would stop growing at
-  // the address bar while the picture behind it ran to the screen edge.
+  // Matched to the box the final picture occupies, which is the viewport
+  // itself - iOS Safari hands a page nothing beyond it.
   const scale = Math.max(
     window.innerWidth / board.w,
-    largeViewportHeight() / board.h
+    window.innerHeight / board.h
   );
   document.documentElement.style.setProperty("--solve-scale", scale);
 
