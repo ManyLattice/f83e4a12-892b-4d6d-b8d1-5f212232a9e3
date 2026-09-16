@@ -172,17 +172,20 @@ body.is-solved .tile {
    the two are the same size at the moment they cross-fade. */
 .final {
   position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  /* The artwork was widened to 1:1.78 by extending its own dark, blurred
-     edges outward. That is wider than the shortest viewport this has to
-     fill - Safari with its chrome showing, which is 1:1.94, not the
-     1:2.17 of the bare screen - so `cover` now spends its crop on the
-     sides, where the invented margin lives, and never on the top and
-     bottom, where the lettering and the table are. Matching the phone
-     exactly was the earlier mistake: the moment the address bar appeared,
-     the screen got shorter and the crop came back. */
+  /* Anchored to the top and stretched to the LARGEST viewport, not the
+     current one. In Safari `inset: 0` only ever covers the area left
+     between the status bar and the address bar, so the picture stopped
+     short of both. 100lvh is the height the page would have if that
+     chrome were collapsed, so the scene runs the full height of the
+     screen and the browser's own bars sit on top of it - which is what
+     viewport-fit=cover in the <meta> was always for. */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100lvh;
+  /* The artwork is 1:2.56, taller than the screen, so cover trims a
+     little from each side. The lettering and the table both sit well
+     inside the frame, so that trim costs nothing. */
   object-fit: cover;
   opacity: 0;
   z-index: 5;
@@ -205,7 +208,7 @@ body.is-solved .board {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(7vh + env(safe-area-inset-bottom));
+  bottom: calc(7dvh + env(safe-area-inset-bottom));
   z-index: 6;
   font-size: 17px;
   letter-spacing: 0.16em;
@@ -234,7 +237,7 @@ body.is-solved .prompt { opacity: 0; animation: none; visibility: hidden; }
 .cta {
   position: fixed;
   left: 50%;
-  bottom: calc(8vh + env(safe-area-inset-bottom));
+  bottom: calc(8dvh + env(safe-area-inset-bottom));
   transform: translateX(-50%) translateY(14px);
   z-index: 7;
   display: inline-block;
@@ -282,7 +285,7 @@ body.is-solved .cta {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(2.6vh + env(safe-area-inset-bottom));
+  bottom: calc(2.6dvh + env(safe-area-inset-bottom));
   z-index: 6;
   font-size: 13px;
   letter-spacing: 0.06em;
@@ -372,7 +375,7 @@ const CONFIG = {
 
   // The aspect ratio the images were generated at (width / height).
   // Measured from the generated artwork itself, not from a target device.
-  aspect: 1128 / 2006,
+  aspect: 784 / 2006,
 
   prompt: "собери",
   cta: "Я согласна",
@@ -535,6 +538,21 @@ function applyScatter(tile) {
 }
 
 /**
+ * The height of the largest viewport - what the page would measure with
+ * the browser's chrome collapsed. Read from CSS rather than guessed, so
+ * it agrees exactly with the `100lvh` on the final picture. Falls back to
+ * the current viewport where lvh is unsupported.
+ */
+function largeViewportHeight() {
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:fixed;top:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none";
+  document.body.appendChild(probe);
+  const height = probe.getBoundingClientRect().height;
+  probe.remove();
+  return height || window.innerHeight;
+}
+
+/**
  * How near home a piece has to be dropped to snap into place. Derived
  * from the shorter side of a tile so it scales with the board, with a
  * floor so it stays reachable by a finger on a small screen.
@@ -653,6 +671,7 @@ function noteEngagement() {
     document.body.classList.add("is-engaged");
   }
   armIdleTimer();
+
 }
 
 /**
@@ -695,9 +714,12 @@ function solve() {
   // mirror the `object-fit: cover` on .final - the two are cross-faded
   // over each other, so a mismatch here would make the scene jump at the
   // swap.
+  // Measured against the same box the final picture uses - the largest
+  // viewport, not the current one - or the puzzle would stop growing at
+  // the address bar while the picture behind it ran to the screen edge.
   const scale = Math.max(
     window.innerWidth / board.w,
-    window.innerHeight / board.h
+    largeViewportHeight() / board.h
   );
   document.documentElement.style.setProperty("--solve-scale", scale);
 
