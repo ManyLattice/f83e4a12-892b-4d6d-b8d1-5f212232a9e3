@@ -334,12 +334,15 @@ body.is-solved .skip { opacity: 0; visibility: hidden; }
     <!-- Tiles are built in JS: their number, size and starting scatter all
          depend on the measured board, and duplicating that in markup would
          mean two sources of truth. -->
-
-    <!-- The lettered scene. Falls back to the plain one if the generated
-         text turns out badly - see CONFIG.finalSrc. -->
-    <img class="final" id="final" src="images/scene-text.webp" alt="" aria-hidden="true">
   </div>
 </div>
+
+<!-- The lettered scene, deliberately OUTSIDE the board. The board carries a
+     transform once solved, and a transformed ancestor becomes the
+     containing block for position: fixed - so in there this image sized
+     itself against the board, not the screen, and `cover` cropped it to
+     the board's shape. Out here it fills the viewport as intended. -->
+<img class="final" id="final" src="images/scene-text.webp" alt="" aria-hidden="true">
 
 <p class="prompt" id="prompt">собери</p>
 
