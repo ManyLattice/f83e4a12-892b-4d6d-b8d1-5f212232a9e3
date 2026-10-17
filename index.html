@@ -93,6 +93,9 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+  /* Own layer: Safari then composites the bitmap as is instead of
+     repainting it at every step of the 3.4x zoom. */
+  will-change: transform;
 }
 /* The porthole sits a little above the centre of the frame: zooming into
    that point is what makes the camera "pass through the window". */
@@ -120,6 +123,7 @@ body {
   top: 7dvh;
   text-align: center;
   text-shadow: 0 2px 18px rgba(20, 10, 6, 0.55);
+  will-change: transform, opacity;
 }
 .kicker {
   font: 600 10.5px/1 var(--font-sans);
@@ -141,6 +145,7 @@ body {
   left: 0; right: 0;
   bottom: calc(3.5dvh + env(safe-area-inset-bottom));
   text-align: center;
+  will-change: opacity;
 }
 .hint .arrow {
   display: block;
@@ -232,6 +237,7 @@ body {
   text-align: center;
   text-shadow: 0 2px 18px rgba(4, 10, 24, 0.7);
   opacity: 0;
+  will-change: transform, opacity;
 }
 .landing-title .script { font: 400 42px/1 var(--font-script); }
 .landing-title .serif { font: 600 34px/1.1 var(--font-serif); margin-top: 8px; }
@@ -246,6 +252,7 @@ body {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   opacity: 0;
+  will-change: transform, opacity;
 }
 .pass .head {
   display: flex;
@@ -296,6 +303,7 @@ body {
   box-shadow: 0 14px 40px rgba(232, 169, 79, 0.45);
   opacity: 0;
   visibility: hidden;
+  will-change: transform, opacity;
 }
 .cta svg { width: 20px; height: 20px; }
 .cta:active { background: #F2C27A; }
@@ -648,11 +656,13 @@ const puffs = sprites.length ? Array.from({ length: 24 }, () => ({
 // The approved look is the cloud field magnified by min(DPR, 2) from the
 // top-left corner. Keep that zoom; the canvas itself stays one pixel per CSS px.
 function resize() {
+  const nextZoom = Math.min(window.devicePixelRatio || 1, 2);
+  if (W === window.innerWidth && H === window.innerHeight && zoom === nextZoom) return;
   W = window.innerWidth;
   H = window.innerHeight;
+  zoom = nextZoom;
   canvas.width = W;
   canvas.height = H;
-  zoom = Math.min(window.devicePixelRatio || 1, 2);
   ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
 }
 
