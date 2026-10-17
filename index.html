@@ -104,6 +104,8 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  background: linear-gradient(rgba(14,26,51,0.7), rgba(14,26,51,0.1) 40%, rgba(14,26,51,0.85));
+  opacity: 0;
 }
 
 #clouds { pointer-events: none; }
@@ -176,6 +178,7 @@ body {
   transform: translate(-50%, -50%) rotate(90deg);
   font: 24px/1 "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+  will-change: transform;
 }
 .alt .value {
   font: 500 10.5px/1 var(--font-mono);
@@ -491,6 +494,31 @@ const sceneWindow = document.querySelector(".scene--window");
 const sceneClouds = document.querySelector(".scene--clouds");
 const sceneCity = document.querySelector(".scene--city");
 const themeMeta = $("theme");
+const hero = $("hero");
+const hint = $("hint");
+const shade = $("shade");
+const alt = $("alt");
+const plane = $("plane");
+const altValue = $("altValue");
+const landingTitle = $("landingTitle");
+const pass = $("pass");
+const cta = $("cta");
+
+const written = new WeakMap();
+function css(el, prop, value) {
+  let props = written.get(el);
+  if (!props) written.set(el, (props = {}));
+  if (props[prop] === value) return;
+  props[prop] = value;
+  el.style[prop] = value;
+}
+
+// visibility drops a fully faded layer from compositing; at opacity 0
+// Safari still blends it every frame (and still blurs behind a card).
+function fade(el, opacity) {
+  css(el, "opacity", opacity);
+  css(el, "visibility", opacity > 0 ? "visible" : "hidden");
+}
 
 let lastBg = "";
 function setChrome(color) {
@@ -505,41 +533,49 @@ function formatAltitude(m) {
   return `${Math.round(m / 100) * 100}`.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " м";
 }
 
+let railH = 0;
+let lastAlt = "";
+
 function render(p) {
   const H = window.innerHeight;
 
   // Opening
   const heroOut = smooth(seg(p, T.heroOut));
-  $("hero").style.opacity = 1 - heroOut;
-  $("hero").style.transform = `translateY(${-30 * heroOut}px)`;
-  $("hint").style.opacity = 1 - smooth(seg(p, [0, 0.04]));
+  fade(hero, 1 - heroOut);
+  css(hero, "transform", `translateY(${-30 * heroOut}px)`);
+  fade(hint, 1 - smooth(seg(p, [0, 0.04])));
 
   // Scenes
   const zoom = easeIn(seg(p, T.zoomIn));
-  sceneWindow.style.transform = `scale(${1 + 2.4 * zoom})`;
-  sceneWindow.style.opacity = 1 - seg(p, T.windowOut);
+  fade(sceneWindow, 1 - seg(p, T.windowOut));
+  css(sceneWindow, "transform", `scale(${1 + 2.4 * zoom})`);
 
   const cloudsVis = seg(p, T.cloudsIn) * (1 - seg(p, T.cloudsOut));
   const pan = smooth(seg(p, T.descend));
   const panRange = 0.17 * H;
-  sceneClouds.style.opacity = cloudsVis;
-  sceneClouds.style.transform = `translateY(${panRange * (1 - 2 * pan)}px) scale(1.36)`;
+  fade(sceneClouds, cloudsVis);
+  css(sceneClouds, "transform", `translateY(${panRange * (1 - 2 * pan)}px) scale(1.36)`);
 
   const cityVis = smooth(seg(p, T.cityIn));
   const approach = smooth(seg(p, T.approach));
-  sceneCity.style.opacity = cityVis;
-  sceneCity.style.transform = `translateY(${-0.06 * H * (1 - approach)}px) scale(${1.45 - 0.45 * approach})`;
+  fade(sceneCity, cityVis);
+  css(sceneCity, "transform", `translateY(${-0.06 * H * (1 - approach)}px) scale(${1.45 - 0.45 * approach})`);
 
   // Darken behind the landing so the pass and the title read.
-  const land = seg(p, T.landTitle);
-  $("shade").style.background = `linear-gradient(rgba(14,26,51,${0.7 * land}), rgba(14,26,51,${0.1 * land}) 40%, rgba(14,26,51,${0.85 * land}))`;
+  fade(shade, seg(p, T.landTitle));
 
   // Altimeter
   const altVis = seg(p, T.altIn) * (1 - seg(p, T.altOut));
   const fall = seg(p, [0.02, 0.95]);
-  $("alt").style.opacity = altVis;
-  $("plane").style.top = `${fall * 100}%`;
-  $("altValue").textContent = formatAltitude(CONFIG.altitude * (1 - fall));
+  fade(alt, altVis);
+  if (altVis > 0) {
+    css(plane, "transform", `translateY(${fall * railH}px) translate(-50%, -50%) rotate(90deg)`);
+    const text = formatAltitude(CONFIG.altitude * (1 - fall));
+    if (text !== lastAlt) {
+      lastAlt = text;
+      altValue.textContent = text;
+    }
+  }
 
   // Hints, spread evenly across their span
   const [c0, c1] = T.cards;
@@ -548,22 +584,22 @@ function render(p) {
     const a = c0 + i * step;
     const inT = smooth(seg(p, [a, a + step * 0.3]));
     const outT = smooth(seg(p, [a + step * 0.75, a + step]));
-    el.style.opacity = inT * (1 - outT);
-    el.style.transform = `translateY(calc(-50% + ${70 * (1 - inT) - 70 * outT}px))`;
+    const vis = inT * (1 - outT);
+    fade(el, vis);
+    if (vis > 0) css(el, "transform", `translateY(calc(-50% + ${70 * (1 - inT) - 70 * outT}px))`);
   });
 
   // Landing
   const lt = smooth(seg(p, T.landTitle));
-  $("landingTitle").style.opacity = lt;
-  $("landingTitle").style.transform = `translateY(${16 * (1 - lt)}px)`;
+  fade(landingTitle, lt);
+  css(landingTitle, "transform", `translateY(${16 * (1 - lt)}px)`);
   const lp = smooth(seg(p, T.landPass));
-  $("pass").style.opacity = lp;
-  $("pass").style.transform = `translateY(${40 * (1 - lp)}px)`;
+  fade(pass, lp);
+  css(pass, "transform", `translateY(${40 * (1 - lp)}px)`);
   const lc = smooth(seg(p, T.landCta));
-  const cta = $("cta");
-  cta.style.opacity = lc;
-  cta.style.transform = `translateY(${24 * (1 - lc)}px)`;
-  cta.style.visibility = lc > 0.02 ? "visible" : "hidden";
+  css(cta, "opacity", lc);
+  css(cta, "transform", `translateY(${24 * (1 - lc)}px)`);
+  css(cta, "visibility", lc > 0.02 ? "visible" : "hidden");
 
   // Browser chrome follows the scene underneath.
   setChrome(p < 0.18 ? "#2F1F19" : p < 0.66 ? "#0E244C" : "#011534");
@@ -576,7 +612,7 @@ function render(p) {
 // ============================================================
 const canvas = $("clouds");
 const ctx = canvas.getContext("2d");
-let W = 0, H = 0, DPR = 1;
+let W = 0, H = 0, zoom = 1;
 
 /** A soft cloud sprite built from overlapping radial blobs, drawn once. */
 function makeSprite(tint) {
@@ -609,31 +645,44 @@ const puffs = sprites.length ? Array.from({ length: 24 }, () => ({
   phase: Math.random() * Math.PI * 2
 })).sort((a, b) => a.z - b.z) : [];
 
+// The approved look is the cloud field magnified by min(DPR, 2) from the
+// top-left corner. Keep that zoom; the canvas itself stays one pixel per CSS px.
 function resize() {
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth;
   H = window.innerHeight;
-  canvas.width = Math.round(W * DPR);
-  canvas.height = Math.round(H * DPR);
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  canvas.width = W;
+  canvas.height = H;
+  zoom = Math.min(window.devicePixelRatio || 1, 2);
+  ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
 }
 
+// dvh settles after load without a resize event, so watch the rail itself.
+new ResizeObserver(([entry]) => {
+  railH = entry.contentRect.height;
+  lastP = -1;
+}).observe(plane.parentElement);
+
 let clock = 0;
-function drawClouds(p) {
-  ctx.clearRect(0, 0, W, H);
-  if (!puffs.length) return;
+function cloudDeck(p) {
   // The deck is thick while the window opens into it and thins out
   // as the valley lights come into view.
-  const deck = seg(p, [0.12, 0.2]) * (1 - seg(p, [0.46, 0.6]));
+  return puffs.length ? seg(p, [0.12, 0.2]) * (1 - seg(p, [0.46, 0.6])) : 0;
+}
+
+function drawClouds(p) {
+  const deck = cloudDeck(p);
+  css(canvas, "visibility", deck > 0 ? "visible" : "hidden");
   if (deck <= 0) return;
+  ctx.clearRect(0, 0, W, H);
   const cam = seg(p, [0.1, 0.6]);
   for (const f of puffs) {
     const y = H * (0.5 + (f.wy - cam * 1.6 + 0.3) * 1.4 * f.z);
     const size = W * 1.1 * f.z;
-    if (y < -size || y > H + size) continue;
     const x = W * f.x + Math.sin(clock * 0.0002 + f.phase) * 18 * f.z - size / 2;
+    const top = y - size / 2;
+    if (top + size * 0.6 < 0 || top > H / zoom || x + size < 0 || x > W / zoom) continue;
     ctx.globalAlpha = deck * (0.2 + 0.45 * f.z);
-    ctx.drawImage(sprites[f.s], x, y - size / 2, size, size * 0.6);
+    ctx.drawImage(sprites[f.s], x, top, size, size * 0.6);
   }
   ctx.globalAlpha = 1;
 }
@@ -650,15 +699,17 @@ let lastP = -1;
 function frame(t) {
   clock = t;
   const p = progress();
-  // Re-render on scroll; while clouds are visible also keep them drifting.
-  if (p !== lastP || (p > 0.12 && p < 0.6 && puffs.length)) {
+  // Re-render on scroll; while clouds are visible only they keep drifting.
+  if (p !== lastP) {
     render(p);
     lastP = p;
+  } else if (cloudDeck(p) > 0) {
+    drawClouds(p);
   }
   requestAnimationFrame(frame);
 }
 
-window.addEventListener("resize", () => { resize(); render(progress()); });
+window.addEventListener("resize", () => { resize(); lastP = -1; });
 resize();
 render(progress());
 requestAnimationFrame(frame);
