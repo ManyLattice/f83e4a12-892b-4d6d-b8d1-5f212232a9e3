@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ru" class="no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Вика</title>
+
+<!-- Open Graph: preview when the link is shared in Telegram.
+     Absolute URL is required - Telegram ignores relative paths, and Pages
+     serves one branch at a time under the repository name.
+     Points at the plain clouds scene: the preview must not give away the trip. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Вика">
+<meta property="og:description" content="Пристегнись">
+<meta property="og:image" content="https://manylattice.github.io/f83e4a12-892b-4d6d-b8d1-5f212232a9e3/images/clouds.webp">
+
+<!-- Sampled from the top edge of the first scene (the cabin wall). -->
+<meta name="theme-color" content="#2F1F19" id="theme">
+
+<style>
+@font-face {
+  font-family: "Marck Script";
+  src: url(fonts/marck-cyr.woff2) format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Marck Script";
+  src: url(fonts/marck-lat.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+2000-206F;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cormorant";
+  font-weight: 600;
+  src: url(fonts/cormorant-cyr.woff) format("woff");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cormorant";
+  font-weight: 600;
+  src: url(fonts/cormorant-lat.woff) format("woff");
+  unicode-range: U+0000-00FF, U+2000-206F;
+  font-display: swap;
+}
+
+/* ===== Variables ===== */
+:root {
+  --ink: #FFF6EA;
+  --night: #0E1A33;
+  --amber: #E8A94F;
+  --rose: #F2A7A0;
+  --paper: #FFF6EA;
+  --paper-ink: #1A1410;
+  --muted: #9A8A74;
+  --font-script: "Marck Script", "Snell Roundhand", cursive;
+  --font-serif: "Cormorant", Georgia, "Times New Roman", serif;
+  --font-sans: -apple-system, "SF Pro Text", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* ===== Base ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { background: #2F1F19; }
+
+body {
+  background: #2F1F19;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 600ms linear;
+}
+
+/* The scroll distance that drives the descent. Nothing is drawn in it -
+   everything visible lives in fixed layers above. */
+.track { height: 900vh; }
+
+/* Fixed layers fill whatever the viewport currently is, so the Safari
+   address bar collapsing mid-scroll does not leave a gap or a jump. */
+.stage, .layer { position: fixed; inset: 0; }
+.stage { overflow: hidden; background: var(--night); }
+
+.scene {
+  position: absolute;
+  inset: 0;
+  will-change: transform, opacity;
+}
+.scene img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* The porthole sits a little above the centre of the frame: zooming into
+   that point is what makes the camera "pass through the window". */
+.scene--window { transform-origin: 50% 46%; }
+.scene--clouds, .scene--city { opacity: 0; }
+.scene--city { transform-origin: 50% 62%; }
+
+.shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#clouds { pointer-events: none; }
+
+.ui { pointer-events: none; }
+.ui a { pointer-events: auto; }
+
+/* ===== Opening ===== */
+.hero {
+  position: absolute;
+  left: 0; right: 0;
+  top: 7dvh;
+  text-align: center;
+  text-shadow: 0 2px 18px rgba(20, 10, 6, 0.55);
+}
+.kicker {
+  font: 600 10.5px/1 var(--font-sans);
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.hero .name {
+  font: 400 56px/1 var(--font-script);
+  margin-top: 12px;
+}
+.hero .line {
+  font: 600 48px/1 var(--font-serif);
+  margin-top: 2px;
+}
+
+.hint {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: calc(3.5dvh + env(safe-area-inset-bottom));
+  text-align: center;
+}
+.hint .arrow {
+  display: block;
+  font-size: 20px;
+  margin-top: 8px;
+  animation: nudge 1.8s ease-in-out infinite;
+}
+@keyframes nudge {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(7px); opacity: 1; }
+}
+
+/* ===== Altimeter ===== */
+.alt {
+  position: absolute;
+  right: 14px;
+  top: 16dvh;
+  bottom: 22dvh;
+  width: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+}
+.alt .rail {
+  position: relative;
+  flex: 1;
+  width: 1px;
+  background: linear-gradient(rgba(255, 246, 234, 0.55) 50%, transparent 0) 0 0 / 1px 8px repeat-y;
+}
+.alt .plane {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -50%) rotate(90deg);
+  font: 24px/1 "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+}
+.alt .value {
+  font: 500 10.5px/1 var(--font-mono);
+  margin-top: 10px;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
+/* ===== Hints along the way ===== */
+.card {
+  position: absolute;
+  left: 18px;
+  right: 70px;
+  top: 50%;
+  border-radius: 20px;
+  overflow: hidden;
+  background: rgba(14, 26, 51, 0.6);
+  border: 1px solid rgba(255, 246, 234, 0.18);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transform: translateY(-50%);
+  will-change: transform, opacity;
+}
+.card .pic {
+  height: min(26dvh, 190px);
+  overflow: hidden;
+}
+.card .pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.card .text { padding: 14px 16px 16px; }
+.card h3 {
+  font: 600 29px/1.05 var(--font-serif);
+  margin: 0 0 6px;
+}
+.card p {
+  font: 400 14.5px/1.45 var(--font-sans);
+  color: rgba(255, 246, 234, 0.84);
+}
+
+/* ===== Landing ===== */
+.landing-title {
+  position: absolute;
+  left: 0; right: 0;
+  top: 6dvh;
+  text-align: center;
+  text-shadow: 0 2px 18px rgba(4, 10, 24, 0.7);
+  opacity: 0;
+}
+.landing-title .script { font: 400 42px/1 var(--font-script); }
+.landing-title .serif { font: 600 34px/1.1 var(--font-serif); margin-top: 8px; }
+
+.pass {
+  position: absolute;
+  left: 20px; right: 20px;
+  bottom: calc(3dvh + 72px + env(safe-area-inset-bottom));
+  border-radius: 18px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  opacity: 0;
+}
+.pass .head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px 11px;
+  border-bottom: 1.5px dashed #D9CBB5;
+}
+.pass .label {
+  font: 600 9.5px/1 var(--font-sans);
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pass .mono { font: 500 13.5px/1 var(--font-mono); }
+.pass .route {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px 6px;
+}
+.pass .city { font: 600 38px/1 var(--font-serif); }
+.pass .route .label { margin-top: 5px; }
+.pass .route .to { text-align: right; }
+.pass .route svg { width: 22px; height: 22px; color: var(--amber); flex: none; }
+.pass .grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  padding: 10px 18px 16px;
+}
+.pass .grid .mono { margin-top: 5px; display: block; }
+
+.cta {
+  position: absolute;
+  left: 20px; right: 20px;
+  bottom: calc(3dvh + env(safe-area-inset-bottom));
+  height: 56px;
+  border-radius: 28px;
+  background: var(--amber);
+  color: var(--paper-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font: 600 22px/1 var(--font-serif);
+  text-decoration: none;
+  box-shadow: 0 14px 40px rgba(232, 169, 79, 0.45);
+  opacity: 0;
+  visibility: hidden;
+}
+.cta svg { width: 20px; height: 20px; }
+.cta:active { background: #F2C27A; }
+
+/* ===== No JS =====
+   Without the script there is no descent: the page shows the landing
+   straight away - city, boarding pass and a working button. */
+.no-js .track { height: auto; }
+.no-js .scene--window, .no-js .hero, .no-js .hint, .no-js .alt, .no-js .card { display: none; }
+.no-js .scene--city, .no-js .landing-title, .no-js .pass { opacity: 1; }
+.no-js .cta { opacity: 1; visibility: visible; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hint .arrow { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="track" aria-hidden="true"></div>
+
+<div class="stage" aria-hidden="true">
+  <div class="scene scene--window"><img src="images/window.webp" alt=""></div>
+  <div class="scene scene--clouds"><img src="images/clouds.webp" alt=""></div>
+  <div class="scene scene--city"><img src="images/city.webp" alt=""></div>
+  <div class="shade" id="shade"></div>
+</div>
+
+<canvas class="layer" id="clouds" aria-hidden="true"></canvas>
+
+<div class="layer ui">
+  <div class="hero" id="hero">
+    <div class="kicker" id="heroKicker">Борт · Алматы</div>
+    <div class="name" id="heroName">Вика,</div>
+    <div class="line" id="heroLine">пристегнись</div>
+  </div>
+
+  <div class="hint" id="hint">
+    <span class="kicker" id="hintText">листай - снижаемся</span>
+    <span class="arrow">↓</span>
+  </div>
+
+  <div class="alt" id="alt">
+    <div class="rail">
+      <span class="plane" id="plane" aria-hidden="true">✈️</span>
+    </div>
+    <div class="value" id="altValue">10 400 м</div>
+  </div>
+
+  <div id="cards"></div>
+
+  <div class="landing-title" id="landingTitle">
+    <div class="script" id="landingScript">Мягкой посадки,</div>
+    <div class="serif" id="landingSerif">полтора дня<br>только для нас</div>
+  </div>
+
+  <div class="pass" id="pass">
+    <div class="head">
+      <span class="label">Посадочный талон</span>
+      <span class="mono" id="flight">VK 1712</span>
+    </div>
+    <div class="route">
+      <div>
+        <div class="city" id="fromCity">NQZ</div>
+        <div class="label" id="fromName">Астана</div>
+      </div>
+      <svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(90deg)"><path fill="currentColor" d="M12 2c.8 0 1.4.7 1.4 1.6v5.6l7.6 4.6v2l-7.6-2.3v4.6l2.2 1.6V21L12 20l-3.6 1v-1.3l2.2-1.6V13.5L3 15.8v-2l7.6-4.6V3.6C10.6 2.7 11.2 2 12 2z"/></svg>
+      <div class="to">
+        <div class="city">ALA</div>
+        <div class="label">Алматы</div>
+      </div>
+    </div>
+    <div class="grid">
+      <div><span class="label">Пассажир</span><span class="mono" id="passenger">ВИКА</span></div>
+      <div><span class="label">Дата</span><span class="mono" id="date">23.10</span></div>
+      <div><span class="label">Место</span><span class="mono" id="seat">рядом</span></div>
+    </div>
+  </div>
+
+  <!-- The href is authored here as well as set from CONFIG, so the button
+       is a working link even if the script never runs. -->
+  <a class="cta" id="cta" href="https://t.me/ManyLattice" target="_blank" rel="noopener">
+    <span id="ctaText">Я готова к взлёту</span>
+    <svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(45deg)"><path fill="currentColor" d="M12 2c.8 0 1.4.7 1.4 1.6v5.6l7.6 4.6v2l-7.6-2.3v4.6l2.2 1.6V21L12 20l-3.6 1v-1.3l2.2-1.6V13.5L3 15.8v-2l7.6-4.6V3.6C10.6 2.7 11.2 2 12 2z"/></svg>
+  </a>
+</div>
+
+<script>
+// The engine is taking over: drop the no-JS safety class.
+document.documentElement.classList.remove("no-js");
+
+// ============================================================
+// CONFIG - the only place to edit when the wording changes
+// ============================================================
+const CONFIG = {
+  title: "Вика",
+
+  hero: { kicker: "Борт · Алматы", name: "Вика,", line: "пристегнись" },
+  hint: "листай - снижаемся",
+
+  // Hints, not a schedule: the plan is still open, so no days and no order.
+  // Add, remove or reorder freely - the descent spreads them out evenly.
+  cards: [
+    { img: "images/hint-mountains.webp", title: "Снег на высоте",
+      text: "Горы, канатка и солнце почти на трёх километрах." },
+    { img: "images/hint-horses.webp", title: "Ветер и гривы",
+      text: "Ты хотела покататься на конях. Я запомнил." },
+    { img: "images/hint-dinner.webp", title: "Ужин с видом",
+      text: "Столик у окна, огни Алматы и только мы." }
+  ],
+
+  landing: { script: "Мягкой посадки,", serif: "полтора дня<br>только для нас" },
+
+  pass: { flight: "VK 1712", from: "NQZ", fromName: "Астана", passenger: "ВИКА", date: "23.10", seat: "рядом" },
+
+  cta: "Я готова к взлёту",
+  reply: "Вика, я тебя очень ценю. Ты прекрасная и умная! Целую в носик, котенок 🫶🏻",
+  telegram: "ManyLattice",
+
+  // Cruising altitude shown at the top of the descent, in metres.
+  altitude: 10400
+};
+
+document.title = CONFIG.title;
+
+// ============================================================
+// Telegram link
+// ============================================================
+
+/**
+ * Builds a t.me link that opens a private chat with the text pre-filled.
+ * The text is NOT sent automatically - pressing send stays her decision.
+ */
+function buildTelegramUrl(username, text) {
+  const cleanUsername = username.trim().replace(/^@/, "");
+  const base = `https://t.me/${cleanUsername}`;
+  return text ? `${base}?text=${encodeURIComponent(text)}` : base;
+}
+
+const $ = (id) => document.getElementById(id);
+
+$("heroKicker").textContent = CONFIG.hero.kicker;
+$("heroName").textContent = CONFIG.hero.name;
+$("heroLine").textContent = CONFIG.hero.line;
+$("hintText").textContent = CONFIG.hint;
+$("landingScript").textContent = CONFIG.landing.script;
+$("landingSerif").innerHTML = CONFIG.landing.serif;
+$("flight").textContent = CONFIG.pass.flight;
+$("fromCity").textContent = CONFIG.pass.from;
+$("fromName").textContent = CONFIG.pass.fromName;
+$("passenger").textContent = CONFIG.pass.passenger;
+$("date").textContent = CONFIG.pass.date;
+$("seat").textContent = CONFIG.pass.seat;
+$("ctaText").textContent = CONFIG.cta;
+$("cta").href = buildTelegramUrl(CONFIG.telegram, CONFIG.reply);
+
+const cardEls = CONFIG.cards.map((c) => {
+  const el = document.createElement("div");
+  el.className = "card";
+  el.innerHTML = `<div class="pic"><img src="${c.img}" alt=""></div>
+    <div class="text"><h3></h3><p></p></div>`;
+  el.querySelector("h3").textContent = c.title;
+  el.querySelector("p").textContent = c.text;
+  $("cards").appendChild(el);
+  return el;
+});
+
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ============================================================
+// Timeline: every visual is a function of scroll progress p in [0, 1]
+// ============================================================
+const T = {
+  heroOut:   [0.02, 0.10],
+  zoomIn:    [0.04, 0.22],   // camera flies into the porthole
+  windowOut: [0.15, 0.24],
+  cloudsIn:  [0.12, 0.20],
+  descend:   [0.15, 0.66],   // pan from the peaks down to the valley lights
+  cloudsOut: [0.60, 0.70],
+  cityIn:    [0.60, 0.72],
+  approach:  [0.60, 0.92],
+  cards:     [0.24, 0.74],   // the span the hints are spread across
+  altIn:     [0.14, 0.20],
+  altOut:    [0.80, 0.86],
+  landTitle: [0.80, 0.88],
+  landPass:  [0.84, 0.93],
+  landCta:   [0.88, 0.96]
+};
+
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const seg = (p, [a, b]) => clamp((p - a) / (b - a), 0, 1);
+const smooth = (t) => t * t * (3 - 2 * t);
+const easeIn = (t) => t * t;
+
+const sceneWindow = document.querySelector(".scene--window");
+const sceneClouds = document.querySelector(".scene--clouds");
+const sceneCity = document.querySelector(".scene--city");
+const themeMeta = $("theme");
+
+let lastBg = "";
+function setChrome(color) {
+  if (color === lastBg) return;
+  lastBg = color;
+  document.body.style.backgroundColor = color;
+  document.documentElement.style.backgroundColor = color;
+  themeMeta.setAttribute("content", color);
+}
+
+function formatAltitude(m) {
+  return `${Math.round(m / 100) * 100}`.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " м";
+}
+
+function render(p) {
+  const H = window.innerHeight;
+
+  // Opening
+  const heroOut = smooth(seg(p, T.heroOut));
+  $("hero").style.opacity = 1 - heroOut;
+  $("hero").style.transform = `translateY(${-30 * heroOut}px)`;
+  $("hint").style.opacity = 1 - smooth(seg(p, [0, 0.04]));
+
+  // Scenes
+  const zoom = easeIn(seg(p, T.zoomIn));
+  sceneWindow.style.transform = `scale(${1 + 2.4 * zoom})`;
+  sceneWindow.style.opacity = 1 - seg(p, T.windowOut);
+
+  const cloudsVis = seg(p, T.cloudsIn) * (1 - seg(p, T.cloudsOut));
+  const pan = smooth(seg(p, T.descend));
+  const panRange = 0.17 * H;
+  sceneClouds.style.opacity = cloudsVis;
+  sceneClouds.style.transform = `translateY(${panRange * (1 - 2 * pan)}px) scale(1.36)`;
+
+  const cityVis = smooth(seg(p, T.cityIn));
+  const approach = smooth(seg(p, T.approach));
+  sceneCity.style.opacity = cityVis;
+  sceneCity.style.transform = `translateY(${-0.06 * H * (1 - approach)}px) scale(${1.45 - 0.45 * approach})`;
+
+  // Darken behind the landing so the pass and the title read.
+  const land = seg(p, T.landTitle);
+  $("shade").style.background = `linear-gradient(rgba(14,26,51,${0.7 * land}), rgba(14,26,51,${0.1 * land}) 40%, rgba(14,26,51,${0.85 * land}))`;
+
+  // Altimeter
+  const altVis = seg(p, T.altIn) * (1 - seg(p, T.altOut));
+  const fall = seg(p, [0.02, 0.95]);
+  $("alt").style.opacity = altVis;
+  $("plane").style.top = `${fall * 100}%`;
+  $("altValue").textContent = formatAltitude(CONFIG.altitude * (1 - fall));
+
+  // Hints, spread evenly across their span
+  const [c0, c1] = T.cards;
+  const step = (c1 - c0) / cardEls.length;
+  cardEls.forEach((el, i) => {
+    const a = c0 + i * step;
+    const inT = smooth(seg(p, [a, a + step * 0.3]));
+    const outT = smooth(seg(p, [a + step * 0.75, a + step]));
+    el.style.opacity = inT * (1 - outT);
+    el.style.transform = `translateY(calc(-50% + ${70 * (1 - inT) - 70 * outT}px))`;
+  });
+
+  // Landing
+  const lt = smooth(seg(p, T.landTitle));
+  $("landingTitle").style.opacity = lt;
+  $("landingTitle").style.transform = `translateY(${16 * (1 - lt)}px)`;
+  const lp = smooth(seg(p, T.landPass));
+  $("pass").style.opacity = lp;
+  $("pass").style.transform = `translateY(${40 * (1 - lp)}px)`;
+  const lc = smooth(seg(p, T.landCta));
+  const cta = $("cta");
+  cta.style.opacity = lc;
+  cta.style.transform = `translateY(${24 * (1 - lc)}px)`;
+  cta.style.visibility = lc > 0.02 ? "visible" : "hidden";
+
+  // Browser chrome follows the scene underneath.
+  setChrome(p < 0.18 ? "#2F1F19" : p < 0.66 ? "#0E244C" : "#011534");
+
+  drawClouds(p);
+}
+
+// ============================================================
+// Clouds the plane falls through (canvas, no library)
+// ============================================================
+const canvas = $("clouds");
+const ctx = canvas.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+
+/** A soft cloud sprite built from overlapping radial blobs, drawn once. */
+function makeSprite(tint) {
+  const s = document.createElement("canvas");
+  const size = 512;
+  s.width = s.height = size;
+  const g = s.getContext("2d");
+  for (let i = 0; i < 18; i++) {
+    const x = size * (0.22 + Math.random() * 0.56);
+    const y = size * (0.36 + Math.random() * 0.3);
+    const r = size * (0.12 + Math.random() * 0.16);
+    const grad = g.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, `rgba(${tint}, 0.42)`);
+    grad.addColorStop(0.55, `rgba(${tint}, 0.18)`);
+    grad.addColorStop(1, `rgba(${tint}, 0)`);
+    g.fillStyle = grad;
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+  }
+  return s;
+}
+
+const sprites = reduceMotion ? [] : [makeSprite("255,246,240"), makeSprite("242,190,185"), makeSprite("210,215,235")];
+const puffs = sprites.length ? Array.from({ length: 24 }, () => ({
+  x: Math.random(),
+  wy: Math.random(),              // depth in the cloud deck
+  z: 0.35 + Math.random() * 0.9,  // nearer puffs are bigger and faster
+  s: Math.floor(Math.random() * 3),
+  phase: Math.random() * Math.PI * 2
+})).sort((a, b) => a.z - b.z) : [];
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+
+let clock = 0;
+function drawClouds(p) {
+  ctx.clearRect(0, 0, W, H);
+  if (!puffs.length) return;
+  // The deck is thick while the window opens into it and thins out
+  // as the valley lights come into view.
+  const deck = seg(p, [0.12, 0.2]) * (1 - seg(p, [0.46, 0.6]));
+  if (deck <= 0) return;
+  const cam = seg(p, [0.1, 0.6]);
+  for (const f of puffs) {
+    const y = H * (0.5 + (f.wy - cam * 1.6 + 0.3) * 1.4 * f.z);
+    const size = W * 1.1 * f.z;
+    if (y < -size || y > H + size) continue;
+    const x = W * f.x + Math.sin(clock * 0.0002 + f.phase) * 18 * f.z - size / 2;
+    ctx.globalAlpha = deck * (0.2 + 0.45 * f.z);
+    ctx.drawImage(sprites[f.s], x, y - size / 2, size, size * 0.6);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ============================================================
+// Loop
+// ============================================================
+function progress() {
+  const max = document.documentElement.scrollHeight - window.innerHeight;
+  return max > 0 ? clamp(window.scrollY / max, 0, 1) : 1;
+}
+
+let lastP = -1;
+function frame(t) {
+  clock = t;
+  const p = progress();
+  // Re-render on scroll; while clouds are visible also keep them drifting.
+  if (p !== lastP || (p > 0.12 && p < 0.6 && puffs.length)) {
+    render(p);
+    lastP = p;
+  }
+  requestAnimationFrame(frame);
+}
+
+window.addEventListener("resize", () => { resize(); render(progress()); });
+resize();
+render(progress());
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
