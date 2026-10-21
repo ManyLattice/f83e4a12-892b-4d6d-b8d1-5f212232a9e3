@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ru" class="no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Вика</title>
+
+<!-- Open Graph: absolute URL, Telegram ignores relative paths. The scene has no text, so the preview does not give the gift away. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Вика">
+<meta property="og:description" content="Для тебя кое-что есть">
+<meta property="og:image" content="https://manylattice.github.io/f83e4a12-892b-4d6d-b8d1-5f212232a9e3/images/scene.webp">
+
+<meta name="theme-color" content="#F9E5DB">
+
+<style>
+@font-face {
+  font-family: "Marck Script";
+  src: url(fonts/marck-cyr.woff2) format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Marck Script";
+  src: url(fonts/marck-lat.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+2000-206F;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cormorant";
+  font-weight: 600;
+  src: url(fonts/cormorant-cyr.woff) format("woff");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cormorant";
+  font-weight: 600;
+  src: url(fonts/cormorant-lat.woff) format("woff");
+  unicode-range: U+0000-00FF, U+2000-206F;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cormorant";
+  font-style: italic;
+  font-weight: 500;
+  src: url(fonts/cormorant-italic-cyr.woff2) format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cormorant";
+  font-style: italic;
+  font-weight: 500;
+  src: url(fonts/cormorant-italic-lat.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+2000-206F;
+  font-display: swap;
+}
+
+/* ===== Variables ===== */
+:root {
+  --plum: #3B2234;
+  --paper: #FFF6EA;
+  --paper-ink: #2A1A24;
+  --paper-text: #5A4652;
+  --tan: #A47C6A;
+  --rose: #C2606E;
+  --amber: #E8A94F;
+  --font-script: "Marck Script", "Snell Roundhand", cursive;
+  --font-serif: "Cormorant", Georgia, "Times New Roman", serif;
+  --font-sans: -apple-system, "SF Pro Text", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --open: 650ms;
+}
+
+/* ===== Base ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { background: #6F3A57; }
+
+body {
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #6F3A57;
+  color: var(--plum);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  object-fit: cover;
+}
+
+/* ===== Closed gift ===== */
+.top {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  top: 54px;
+  text-align: center;
+  transition: opacity 250ms ease, transform 250ms ease;
+}
+.top .script { font: 40px/1 var(--font-script); }
+.top h1 { font: 600 36px/1.05 var(--font-serif); margin-top: 10px; }
+.top p { font: 15px/1.45 var(--font-sans); margin-top: 12px; opacity: .75; }
+
+.hint {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(30px + env(safe-area-inset-bottom));
+  text-align: center;
+  font: 600 11px var(--font-sans);
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: var(--paper);
+  animation: pulse 2.4s ease-in-out infinite;
+  transition: opacity 200ms ease;
+}
+@keyframes pulse { 50% { opacity: .55; } }
+
+.open-gift {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+/* ===== Certificate ===== */
+.dim {
+  position: fixed;
+  inset: 0;
+  background: rgba(59, 34, 52, .42);
+  transition: opacity var(--open) ease;
+}
+
+.cert {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: 58px;
+  border-radius: 20px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  box-shadow: 0 24px 60px rgba(59, 34, 52, .45);
+  overflow: hidden;
+  transition: transform var(--open) cubic-bezier(.2, .9, .25, 1.12), opacity 250ms ease;
+  will-change: transform;
+}
+.cert .hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px 0;
+}
+.small-caps {
+  font: 600 9.5px var(--font-sans);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--tan);
+}
+.mono { font: 500 11px var(--font-mono); color: var(--tan); }
+.cert .body { padding: 14px 20px 18px; text-align: center; }
+.cert .for { font: 30px/1 var(--font-script); color: var(--rose); }
+.cert h2 { font: 600 42px/1 var(--font-serif); margin: 8px 0 12px; }
+.cert p { font: 14.5px/1.5 var(--font-sans); color: var(--paper-text); }
+
+.perf {
+  position: relative;
+  height: 0;
+  border-top: 1.5px dashed #E2CDBB;
+  margin: 0 18px;
+}
+.perf::before, .perf::after {
+  content: "";
+  position: absolute;
+  top: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #B9727F;
+}
+.perf::before { left: -30px; }
+.perf::after { right: -30px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  padding: 16px 20px 6px;
+}
+.label {
+  display: block;
+  font: 600 8.5px var(--font-sans);
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--tan);
+}
+.val { display: block; font: 500 13px var(--font-mono); margin-top: 4px; color: var(--paper-ink); }
+.fine {
+  padding: 8px 20px 18px;
+  font: italic 500 15px/1.35 var(--font-serif);
+  color: #8A6E62;
+  text-align: center;
+}
+
+.cta {
+  position: fixed;
+  left: 20px;
+  right: 20px;
+  bottom: calc(30px + env(safe-area-inset-bottom));
+  height: 56px;
+  border-radius: 28px;
+  background: var(--amber);
+  color: var(--paper-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 22px var(--font-serif);
+  text-decoration: none;
+  box-shadow: 0 14px 40px rgba(232, 169, 79, .5);
+  transition: opacity 300ms ease calc(var(--open) * .6), transform 300ms ease calc(var(--open) * .6);
+}
+
+/* ===== States: closed until tapped; without JS the certificate is open ===== */
+.js body:not(.is-open) .dim { opacity: 0; }
+.js body:not(.is-open) .cert { transform: translateY(110dvh); }
+.js body:not(.is-open) .cta { opacity: 0; transform: translateY(12px); visibility: hidden; }
+.js body:not(.is-open) .dim,
+.js body:not(.is-open) .cert { pointer-events: none; }
+
+.no-js .top, .no-js .hint, .no-js .open-gift,
+.js body.is-open .open-gift { display: none; }
+.js body.is-open .top { opacity: 0; transform: translateY(-8px); }
+.js body.is-open .hint { opacity: 0; animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --open: 1ms; }
+  .hint { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<img class="scene" src="images/scene.webp" alt="">
+
+<div class="top">
+  <div class="script" id="hello">Вика,</div>
+  <h1 id="title">После Алматы -<br>ещё кое-что</h1>
+  <p id="lead">Маленький подарок, чтобы та история<br>с коленкой закончилась красиво.</p>
+</div>
+<div class="hint" id="hint">Нажми на подарок</div>
+<button class="open-gift" id="openGift" type="button" aria-label="Открыть подарок"></button>
+
+<div class="dim"></div>
+
+<section class="cert" aria-label="Подарочный сертификат">
+  <div class="hd">
+    <span class="small-caps" id="certKicker">Подарочный сертификат</span>
+    <span class="mono" id="certNumber">№ 001</span>
+  </div>
+  <div class="body">
+    <div class="for" id="certFor">для Вики</div>
+    <h2 id="certTitle">Шлифовка<br>коленки</h2>
+    <p id="certText">Горы - это приключение. А это бонус после них: процедура, после которой от падения останется только смешная история.</p>
+  </div>
+  <div class="perf"></div>
+  <div class="grid">
+    <div><span class="label">Кому</span><span class="val" id="certWho">Вике</span></div>
+    <div><span class="label">Когда</span><span class="val" id="certWhen">после Алматы</span></div>
+    <div><span class="label">Где</span><span class="val" id="certWhere">сюрприз</span></div>
+  </div>
+  <div class="fine" id="certFine">Срока нет. Обмену на что-то скучное не подлежит.</div>
+</section>
+
+<a class="cta" id="cta" href="https://t.me/ManyLattice?text=%D0%95%D0%B1%D0%B0%D1%82%D1%8C%20%D1%82%D1%8B%20%D0%BA%D0%B0%D0%B4%D1%80%20%D0%BA%D0%BE%D0%BD%D0%B5%D1%87%D0%BD%D0%BE!%20%D0%94%D0%B0%D0%B2%D0%B0%D0%B9" target="_blank" rel="noopener">Забираю подарок</a>
+
+<script>
+document.documentElement.classList.replace("no-js", "js");
+
+const CONFIG = {
+  title: "Вика",
+
+  hello: "Вика,",
+  heading: "После Алматы -<br>ещё кое-что",
+  lead: "Маленький подарок, чтобы та история<br>с коленкой закончилась красиво.",
+  hint: "Нажми на подарок",
+
+  cert: {
+    kicker: "Подарочный сертификат",
+    number: "№ 001",
+    for: "для Вики",
+    title: "Шлифовка<br>коленки",
+    text: "Горы - это приключение. А это бонус после них: процедура, после которой от падения останется только смешная история.",
+    who: "Вике",
+    when: "после Алматы",
+    where: "сюрприз",
+    fine: "Срока нет. Обмену на что-то скучное не подлежит."
+  },
+
+  cta: "Забираю подарок",
+  reply: "Ебать ты кадр конечно! Давай",
+  telegram: "ManyLattice"
+};
+
+/**
+ * Builds a t.me link that opens a private chat with the text pre-filled.
+ * The text is NOT sent automatically - pressing send stays her decision.
+ */
+function buildTelegramUrl(username, text) {
+  const cleanUsername = username.trim().replace(/^@/, "");
+  const base = `https://t.me/${cleanUsername}`;
+  return text ? `${base}?text=${encodeURIComponent(text)}` : base;
+}
+
+const $ = (id) => document.getElementById(id);
+
+document.title = CONFIG.title;
+$("hello").textContent = CONFIG.hello;
+$("title").innerHTML = CONFIG.heading;
+$("lead").innerHTML = CONFIG.lead;
+$("hint").textContent = CONFIG.hint;
+$("certKicker").textContent = CONFIG.cert.kicker;
+$("certNumber").textContent = CONFIG.cert.number;
+$("certFor").textContent = CONFIG.cert.for;
+$("certTitle").innerHTML = CONFIG.cert.title;
+$("certText").textContent = CONFIG.cert.text;
+$("certWho").textContent = CONFIG.cert.who;
+$("certWhen").textContent = CONFIG.cert.when;
+$("certWhere").textContent = CONFIG.cert.where;
+$("certFine").textContent = CONFIG.cert.fine;
+$("cta").textContent = CONFIG.cta;
+$("cta").href = buildTelegramUrl(CONFIG.telegram, CONFIG.reply);
+
+$("openGift").addEventListener("click", () => document.body.classList.add("is-open"));
+</script>
+</body>
+</html>
